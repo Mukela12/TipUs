@@ -325,21 +325,27 @@ serve(async (req) => {
           if (stripeSecretKey.startsWith("sk_test_")) {
             const fundAmount = totalNeeded - availableAud + 500;
             try {
+              const token = await stripe.tokens.create({
+                card: {
+                  number: "4000000000000077",
+                  exp_month: 12,
+                  exp_year: 2028,
+                  cvc: "123",
+                },
+              });
               await stripe.charges.create({
                 amount: fundAmount,
                 currency: "aud",
-                source: "tok_visa",
-                description: "Test mode: auto-funded for auto-payout",
+                source: token.id,
+                description: "Test mode: fund available balance for auto-payout",
               });
-              await new Promise((r) => setTimeout(r, 1000));
-            } catch {
-              await stripe.charges.create({
-                amount: fundAmount,
-                currency: "aud",
-                source: "tok_bypassPending",
-                description: "Test mode: auto-funded for auto-payout (fallback)",
-              });
-              await new Promise((r) => setTimeout(r, 1000));
+              console.log(`Test mode: added $${(fundAmount / 100).toFixed(2)} to available balance`);
+            } catch (fundErr) {
+              const fundMsg = fundErr instanceof Error ? fundErr.message : String(fundErr);
+              console.error("Test mode auto-payout funding failed:", fundMsg);
+              await supabase.from("payouts").update({ status: "failed" }).eq("id", payout.id);
+              results.push({ venue_id: venue.id, venue_name: venue.name, status: "failed", error: `Funding failed: ${fundMsg}` });
+              continue;
             }
           } else {
             await supabase.from("payouts").update({ status: "failed" }).eq("id", payout.id);

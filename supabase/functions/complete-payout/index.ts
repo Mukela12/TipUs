@@ -155,36 +155,31 @@ serve(async (req) => {
 
     if (availableAud < totalNeeded) {
       if (stripeSecretKey.startsWith("sk_test_")) {
-        // Test mode: create a test charge using tok_visa token to fund available balance
-        const fundAmount = totalNeeded - availableAud + 500; // buffer for fees
+        // Test mode: use card 4000000000000077 which goes directly to available balance
+        const fundAmount = totalNeeded - availableAud + 500;
         try {
-          // tok_visa creates an immediately-available charge in test mode
+          const token = await stripe.tokens.create({
+            card: {
+              number: "4000000000000077",
+              exp_month: 12,
+              exp_year: 2028,
+              cvc: "123",
+            },
+          });
           await stripe.charges.create({
             amount: fundAmount,
             currency: "aud",
-            source: "tok_visa",
-            description: "Test mode: auto-funded for payout testing",
+            source: token.id,
+            description: "Test mode: fund available balance for payout",
           });
-          // Wait a moment for balance to update
-          await new Promise((r) => setTimeout(r, 1000));
-          console.log(`Test mode: added $${(fundAmount / 100).toFixed(2)} to platform balance`);
+          console.log(`Test mode: added $${(fundAmount / 100).toFixed(2)} to available balance`);
         } catch (fundErr) {
           const fundMsg = fundErr instanceof Error ? fundErr.message : String(fundErr);
           console.error("Test mode funding failed:", fundMsg);
-          // Try alternative token
-          try {
-            await stripe.charges.create({
-              amount: fundAmount,
-              currency: "aud",
-              source: "tok_bypassPending",
-              description: "Test mode: auto-funded for payout testing (fallback)",
-            });
-            await new Promise((r) => setTimeout(r, 1000));
-            console.log(`Test mode (fallback): added $${(fundAmount / 100).toFixed(2)}`);
-          } catch (fallbackErr) {
-            const fbMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-            console.error("Test mode fallback funding also failed:", fbMsg);
-          }
+          return jsonResponse(
+            { error: `Test mode funding failed: ${fundMsg}. Try adding a tip with test card 4242424242424242 first.` },
+            400
+          );
         }
       } else {
         return jsonResponse(
