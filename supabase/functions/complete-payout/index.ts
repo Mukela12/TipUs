@@ -32,6 +32,7 @@ serve(async (req) => {
       return jsonResponse({ error: "payout_id is required" }, 400);
     }
 
+    const isTestMode = stripeSecretKey.startsWith("sk_test_");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -113,75 +114,79 @@ serve(async (req) => {
       );
     }
 
-    // 5. Fetch tips for this payout period to reverse their auto-transfers
-    const { data: tips } = await supabase
-      .from("tips")
-      .select("id, amount, stripe_payment_intent_id")
-      .eq("venue_id", payout.venue_id)
-      .eq("status", "succeeded")
-      .gte("created_at", payout.period_start)
-      .lte("created_at", `${payout.period_end}T23:59:59.999Z`);
-
-    // 6. Reverse auto-transfers to bring money from venue's Express account back to platform
-    //    Tips were created with transfer_data.destination → auto-transferred to venue
-    //    We reverse those transfers so the platform holds the funds for distribution
-    let totalReversed = 0;
-    for (const tip of tips ?? []) {
-      if (!tip.stripe_payment_intent_id) continue;
-      try {
-        const pi = await stripe.paymentIntents.retrieve(tip.stripe_payment_intent_id);
-        if (pi.transfer) {
-          const transferId = typeof pi.transfer === "string" ? pi.transfer : pi.transfer.id;
-          const transfer = await stripe.transfers.retrieve(transferId);
-          const unreversedAmount = transfer.amount - (transfer.amount_reversed ?? 0);
-          if (unreversedAmount > 0) {
-            await stripe.transfers.createReversal(transferId, { amount: unreversedAmount });
-            totalReversed += unreversedAmount;
-            console.log(`Reversed transfer ${transferId}: $${(unreversedAmount / 100).toFixed(2)}`);
-          }
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`Failed to reverse transfer for tip ${tip.id}: ${msg}`);
-      }
-    }
-
-    console.log(`Total reversed: $${(totalReversed / 100).toFixed(2)}, net needed: $${(payout.net_amount / 100).toFixed(2)}`);
-
-    // 6b. Ensure platform has sufficient balance for the transfers
     const totalNeeded = distributions.reduce((sum, d) => sum + d.amount, 0);
-    const platformBalance = await stripe.balance.retrieve();
-    const availableAud = platformBalance.available.find((b) => b.currency === "aud")?.amount ?? 0;
 
-    if (availableAud < totalNeeded) {
-      if (stripeSecretKey.startsWith("sk_test_")) {
-        // Test mode: use card 4000000000000077 which goes directly to available balance
-        const fundAmount = totalNeeded - availableAud + 500;
+    // 5. Handle balance: reverse auto-transfers OR fund in test mode
+    if (isTestMode) {
+      // TEST MODE: Skip transfer reversal entirely — just fund the platform
+      // balance directly using the special test card that goes to available balance
+      console.log(`Test mode: funding platform with $${((totalNeeded + 500) / 100).toFixed(2)} for payout`);
+      const token = await stripe.tokens.create({
+        card: {
+          number: "4000000000000077",
+          exp_month: 12,
+          exp_year: 2028,
+          cvc: "123",
+        },
+      });
+      await stripe.charges.create({
+        amount: totalNeeded + 500,
+        currency: "aud",
+        source: token.id,
+        description: "Test mode: fund available balance for payout",
+      });
+      console.log(`Test mode: funded successfully`);
+    } else {
+      // PRODUCTION: Reverse auto-transfers to bring money back to platform
+      const { data: tips } = await supabase
+        .from("tips")
+        .select("id, amount, stripe_payment_intent_id")
+        .eq("venue_id", payout.venue_id)
+        .eq("status", "succeeded")
+        .gte("created_at", payout.period_start)
+        .lte("created_at", `${payout.period_end}T23:59:59.999Z`);
+
+      let totalReversed = 0;
+      for (const tip of tips ?? []) {
+        if (!tip.stripe_payment_intent_id) continue;
         try {
-          const token = await stripe.tokens.create({
-            card: {
-              number: "4000000000000077",
-              exp_month: 12,
-              exp_year: 2028,
-              cvc: "123",
-            },
+          const pi = await stripe.paymentIntents.retrieve(tip.stripe_payment_intent_id, {
+            expand: ["latest_charge"],
           });
-          await stripe.charges.create({
-            amount: fundAmount,
-            currency: "aud",
-            source: token.id,
-            description: "Test mode: fund available balance for payout",
-          });
-          console.log(`Test mode: added $${(fundAmount / 100).toFixed(2)} to available balance`);
-        } catch (fundErr) {
-          const fundMsg = fundErr instanceof Error ? fundErr.message : String(fundErr);
-          console.error("Test mode funding failed:", fundMsg);
-          return jsonResponse(
-            { error: `Test mode funding failed: ${fundMsg}. Try adding a tip with test card 4242424242424242 first.` },
-            400
-          );
+
+          // Try pi.transfer first, then fall back to latest_charge.transfer
+          let transferId: string | null = null;
+          if (pi.transfer) {
+            transferId = typeof pi.transfer === "string" ? pi.transfer : pi.transfer.id;
+          } else if (pi.latest_charge && typeof pi.latest_charge !== "string") {
+            const charge = pi.latest_charge as Stripe.Charge;
+            if (charge.transfer) {
+              transferId = typeof charge.transfer === "string" ? charge.transfer : charge.transfer.id;
+            }
+          }
+
+          if (transferId) {
+            const transfer = await stripe.transfers.retrieve(transferId);
+            const unreversedAmount = transfer.amount - (transfer.amount_reversed ?? 0);
+            if (unreversedAmount > 0) {
+              await stripe.transfers.createReversal(transferId, { amount: unreversedAmount });
+              totalReversed += unreversedAmount;
+              console.log(`Reversed transfer ${transferId}: $${(unreversedAmount / 100).toFixed(2)}`);
+            }
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`Failed to reverse transfer for tip ${tip.id}: ${msg}`);
         }
-      } else {
+      }
+
+      console.log(`Total reversed: $${(totalReversed / 100).toFixed(2)}, net needed: $${(payout.net_amount / 100).toFixed(2)}`);
+
+      // Check platform balance
+      const platformBalance = await stripe.balance.retrieve();
+      const availableAud = platformBalance.available.find((b) => b.currency === "aud")?.amount ?? 0;
+
+      if (availableAud < totalNeeded) {
         return jsonResponse(
           {
             error: `Insufficient platform balance. Available: $${(availableAud / 100).toFixed(2)}, needed: $${(totalNeeded / 100).toFixed(2)}. Ensure tip payments have settled.`,
@@ -191,10 +196,7 @@ serve(async (req) => {
       }
     }
 
-    // 7. Process each distribution
-    //    For each employee: create a Stripe Custom connected account (if needed),
-    //    add their bank, then Transfer from the platform to their account.
-    //    The Custom account automatically pays out to the employee's bank.
+    // 6. Process each distribution — transfer to employee connected accounts
     const results: { employee_id: string; employee_name: string; status: string; error?: string }[] = [];
     let allSucceeded = true;
 
@@ -210,10 +212,9 @@ serve(async (req) => {
       };
 
       try {
-        // stripe_bank_account_id stores the employee's Stripe connected account ID (acct_xxx)
         let employeeStripeAccountId = emp.stripe_bank_account_id;
 
-        // 7a. Create a Custom connected account for the employee if they don't have one
+        // Create a Custom connected account for the employee if they don't have one
         if (!employeeStripeAccountId) {
           const nameParts = emp.name.trim().split(/\s+/);
           const firstName = nameParts[0] || emp.name;
@@ -262,7 +263,6 @@ serve(async (req) => {
 
           employeeStripeAccountId = account.id;
 
-          // Cache the connected account ID on the employee record
           await supabase
             .from("employees")
             .update({ stripe_bank_account_id: employeeStripeAccountId })
@@ -271,7 +271,7 @@ serve(async (req) => {
           console.log(`Created Custom account ${employeeStripeAccountId} for ${emp.name}`);
         }
 
-        // 7b. Transfer from platform to the employee's connected account
+        // Transfer from platform to the employee's connected account
         const transfer = await stripe.transfers.create({
           amount: dist.amount,
           currency: "aud",
@@ -299,7 +299,7 @@ serve(async (req) => {
       }
     }
 
-    // 8. Update payout status based on results
+    // 7. Update payout status based on results
     const newStatus = allSucceeded ? "completed" : "failed";
     const { data: updated, error: updateError } = await supabase
       .from("payouts")
