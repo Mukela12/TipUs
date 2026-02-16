@@ -325,18 +325,10 @@ serve(async (req) => {
           if (stripeSecretKey.startsWith("sk_test_")) {
             const fundAmount = totalNeeded - availableAud + 500;
             try {
-              const token = await stripe.tokens.create({
-                card: {
-                  number: "4000000000000077",
-                  exp_month: 12,
-                  exp_year: 2028,
-                  cvc: "123",
-                },
-              });
               await stripe.charges.create({
                 amount: fundAmount,
                 currency: "aud",
-                source: token.id,
+                source: "tok_bypassPending",
                 description: "Test mode: fund available balance for auto-payout",
               });
               console.log(`Test mode: added $${(fundAmount / 100).toFixed(2)} to available balance`);

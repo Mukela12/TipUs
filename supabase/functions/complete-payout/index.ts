@@ -118,21 +118,14 @@ serve(async (req) => {
 
     // 5. Handle balance: reverse auto-transfers OR fund in test mode
     if (isTestMode) {
-      // TEST MODE: Skip transfer reversal entirely — just fund the platform
-      // balance directly using the special test card that goes to available balance
-      console.log(`Test mode: funding platform with $${((totalNeeded + 500) / 100).toFixed(2)} for payout`);
-      const token = await stripe.tokens.create({
-        card: {
-          number: "4000000000000077",
-          exp_month: 12,
-          exp_year: 2028,
-          cvc: "123",
-        },
-      });
+      // TEST MODE: Skip transfer reversal entirely — fund available balance
+      // using tok_bypassPending which bypasses the pending period
+      const fundAmount = totalNeeded + 500;
+      console.log(`Test mode: funding platform with $${(fundAmount / 100).toFixed(2)} using tok_bypassPending`);
       await stripe.charges.create({
-        amount: totalNeeded + 500,
+        amount: fundAmount,
         currency: "aud",
-        source: token.id,
+        source: "tok_bypassPending",
         description: "Test mode: fund available balance for payout",
       });
       console.log(`Test mode: funded successfully`);
