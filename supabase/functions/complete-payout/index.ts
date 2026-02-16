@@ -155,15 +155,37 @@ serve(async (req) => {
 
     if (availableAud < totalNeeded) {
       if (stripeSecretKey.startsWith("sk_test_")) {
-        // Test mode: create a test charge to fund the platform balance
-        const fundAmount = totalNeeded - availableAud + 100; // small buffer
-        await stripe.charges.create({
-          amount: fundAmount,
-          currency: "aud",
-          source: "tok_bypassPending",
-          description: "Test mode: auto-funded for payout testing",
-        });
-        console.log(`Test mode: added $${(fundAmount / 100).toFixed(2)} to platform balance`);
+        // Test mode: create a test charge using tok_visa token to fund available balance
+        const fundAmount = totalNeeded - availableAud + 500; // buffer for fees
+        try {
+          // tok_visa creates an immediately-available charge in test mode
+          await stripe.charges.create({
+            amount: fundAmount,
+            currency: "aud",
+            source: "tok_visa",
+            description: "Test mode: auto-funded for payout testing",
+          });
+          // Wait a moment for balance to update
+          await new Promise((r) => setTimeout(r, 1000));
+          console.log(`Test mode: added $${(fundAmount / 100).toFixed(2)} to platform balance`);
+        } catch (fundErr) {
+          const fundMsg = fundErr instanceof Error ? fundErr.message : String(fundErr);
+          console.error("Test mode funding failed:", fundMsg);
+          // Try alternative token
+          try {
+            await stripe.charges.create({
+              amount: fundAmount,
+              currency: "aud",
+              source: "tok_bypassPending",
+              description: "Test mode: auto-funded for payout testing (fallback)",
+            });
+            await new Promise((r) => setTimeout(r, 1000));
+            console.log(`Test mode (fallback): added $${(fundAmount / 100).toFixed(2)}`);
+          } catch (fallbackErr) {
+            const fbMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+            console.error("Test mode fallback funding also failed:", fbMsg);
+          }
+        }
       } else {
         return jsonResponse(
           {

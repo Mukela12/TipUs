@@ -323,13 +323,24 @@ serve(async (req) => {
 
         if (availableAud < totalNeeded) {
           if (stripeSecretKey.startsWith("sk_test_")) {
-            const fundAmount = totalNeeded - availableAud + 100;
-            await stripe.charges.create({
-              amount: fundAmount,
-              currency: "aud",
-              source: "tok_bypassPending",
-              description: "Test mode: auto-funded for auto-payout",
-            });
+            const fundAmount = totalNeeded - availableAud + 500;
+            try {
+              await stripe.charges.create({
+                amount: fundAmount,
+                currency: "aud",
+                source: "tok_visa",
+                description: "Test mode: auto-funded for auto-payout",
+              });
+              await new Promise((r) => setTimeout(r, 1000));
+            } catch {
+              await stripe.charges.create({
+                amount: fundAmount,
+                currency: "aud",
+                source: "tok_bypassPending",
+                description: "Test mode: auto-funded for auto-payout (fallback)",
+              });
+              await new Promise((r) => setTimeout(r, 1000));
+            }
           } else {
             await supabase.from("payouts").update({ status: "failed" }).eq("id", payout.id);
             results.push({ venue_id: venue.id, venue_name: venue.name, status: "failed", error: "Insufficient platform balance" });
