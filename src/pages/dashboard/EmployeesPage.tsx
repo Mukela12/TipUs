@@ -7,7 +7,6 @@ import {
   Loader2,
   X,
   UserCheck,
-  UserX,
 } from 'lucide-react'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { cn } from '@/lib/utils'

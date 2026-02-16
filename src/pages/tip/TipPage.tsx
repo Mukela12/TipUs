@@ -23,7 +23,7 @@ interface QRInfo {
 // ──────────────────────────────────────────────────
 function PaymentForm({
   amount,
-  qrInfo,
+  qrInfo: _qrInfo,
   onSuccess,
   onCancel,
 }: {

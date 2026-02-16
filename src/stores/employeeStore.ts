@@ -23,7 +23,7 @@ interface EmployeeState {
   reset: () => void
 }
 
-export const useEmployeeStore = create<EmployeeState>((set, get) => ({
+export const useEmployeeStore = create<EmployeeState>((set, _get) => ({
   employees: [],
   loading: false,
   initialized: false,

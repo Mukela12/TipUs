@@ -137,8 +137,9 @@ export const useEmployeeDashboardStore = create<EmployeeDashboardState>((set) =>
 
       const tips = (data ?? []).map((row: Record<string, unknown>) => {
         const employees = row.employees as { name: string } | null
+        const { employees: _employees, ...tipFields } = row
         return {
-          ...(row as Tip),
+          ...(tipFields as unknown as Tip),
           employee_name: employees?.name ?? undefined,
         }
       })
