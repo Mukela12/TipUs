@@ -1,14 +1,14 @@
 # TipUs — Project Progress & Continuation Guide
 
-> Last updated: 17 Feb 2026, Platform-Direct Money Flow
+> Last updated: 17 Feb 2026, Partial Payout Failure Fix
 > Project: `/Users/mukelakatungu/tipus`
 > Supabase project: `ghxwritgesdhtoupwvwm` (Tipus, Sydney region)
 
 ---
 
-## Current State: ~97% Complete — Production-Ready
+## Current State: ~98% Complete — Production-Ready
 
-Both venue-owner and employee dashboards are fully functional. Logo integrated, role-based routing working, RLS policies in place, dead code removed, security audit passed. Stripe webhook endpoint configured and listening for `payment_intent.succeeded`. Production build succeeds at ~210KB gzipped. **Remaining**: analytics charts (recharts installed but not wired), bulk employee invite, payout email notifications.
+Both venue-owner and employee dashboards are fully functional. Logo integrated, role-based routing working, RLS policies in place, dead code removed, security audit passed. Stripe webhook endpoint configured and listening for `payment_intent.succeeded`. Production build succeeds at ~210KB gzipped. Platform-direct money flow implemented (venues never touch Stripe). Partial payout failure handling with per-distribution status tracking prevents double-payments on retry. **Remaining**: analytics charts (recharts installed but not wired), bulk employee invite, payout email notifications.
 
 ---
 
@@ -95,7 +95,7 @@ Accumulate Tips → Calculate Splits → Review → Execute Payout → Money Sen
 Configure Schedule → Cron Runs Daily → Auto Process + Execute → Funds Sent
        ✅                  ✅                   ✅                  ✅
 ```
-**Status**: `process-payout` Edge Function calculates per-employee splits prorated by days active. `complete-payout` checks platform balance and sends transfers to employee Custom Stripe accounts. No transfer reversals needed — money never leaves the platform.
+**Status**: `process-payout` Edge Function calculates per-employee splits prorated by days active. `complete-payout` checks platform balance and sends transfers to employee Custom Stripe accounts. No transfer reversals needed — money never leaves the platform. Per-distribution status tracking prevents double-payments: completed distributions are skipped on retry, failed distributions can be retried individually.
 **Recurring**: `auto-payout` Edge Function triggered daily at 2am UTC via pg_cron + pg_net.
 
 ---
@@ -119,6 +119,7 @@ Configure Schedule → Cron Runs Daily → Auto Process + Execute → Funds Sent
 | Payout calculation | ✅ | ✅ | ✅ Working (prorated by days active) |
 | Payout execution (Stripe) | ✅ | ✅ | ✅ Working (platform → employees) |
 | Recurring scheduled payouts | ✅ | ✅ | ✅ Working (pg_cron + auto-payout) |
+| Partial payout failure handling | ✅ | ✅ | ✅ Working (per-distribution status, retry safe) |
 | Employee dashboard | ✅ | ✅ | ✅ Working (Phase 7) |
 | Logo + branding | ✅ | N/A | ✅ Integrated (Phase 8) |
 | Production build | ✅ | N/A | ✅ ~210KB gzipped |
@@ -133,6 +134,9 @@ Configure Schedule → Cron Runs Daily → Auto Process + Execute → Funds Sent
 
 ### ✅ RESOLVED: Scan Count Never Incremented
 **Fixed**: `create-payment-intent` increments `scan_count` when payment is initiated. `stripe-webhook` also increments on successful payment.
+
+### ✅ RESOLVED: Payout Double-Payment on Retry
+**Fixed**: Per-distribution status tracking (`status`, `stripe_transfer_id`, `error_message` on `payout_distributions`). Completed distributions are skipped on retry. Payout uses `partially_completed` status when some transfers succeed and some fail.
 
 ### 🟡 MEDIUM: tipStore Stats Assume Succeeded Status
 `computeStats()` in tipStore.ts filters on `status === 'succeeded'` — this is now correct since the webhook inserts tips with `status: 'succeeded'`.
@@ -177,14 +181,15 @@ is_active, scan_count, created_at
 ### payouts
 ```
 id, venue_id, period_start, period_end, total_amount,
-platform_fee, net_amount, status, stripe_transfer_id,
-processed_at, created_at
+platform_fee, net_amount, status (pending|processing|completed|partially_completed|failed),
+stripe_transfer_id, processed_at, created_at
 ```
 
 ### payout_distributions
 ```
 id, payout_id, employee_id, amount, days_active,
-total_period_days, is_prorated, created_at
+total_period_days, is_prorated, status (pending|completed|failed),
+stripe_transfer_id, error_message, created_at
 ```
 
 ### employee_invitations (schema only, tokens stored on employees table instead)
@@ -368,7 +373,19 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 11. ✅ Created migration to drop venue Stripe columns
 12. ✅ Updated third quick-action card: "Set up payouts" → `/dashboard/payouts`
 
-### Phase 10: Remaining Items (Future)
+### Phase 10: Partial Payout Failure Fix ✅ COMPLETE
+1. ✅ Added `status`, `stripe_transfer_id`, `error_message` columns to `payout_distributions`
+2. ✅ `complete-payout` now skips already-completed distributions on retry — no double-payments
+3. ✅ Each distribution marked individually as `completed` (with transfer ID) or `failed` (with error)
+4. ✅ Payout status: `partially_completed` when some succeed and some fail
+5. ✅ Payouts with status `pending`, `partially_completed`, or `failed` can be retried
+6. ✅ `auto-payout` has same per-distribution tracking
+7. ✅ Frontend shows per-distribution status badges (Sent/Failed/Pending)
+8. ✅ "Retry Failed" button for partially_completed and failed payouts
+9. ✅ Confirmation modal explains retry only sends to failed employees
+10. ✅ Migration deployed, edge functions deployed, build passes
+
+### Phase 11: Remaining Items (Future)
 1. ❌ Analytics charts (recharts installed but not wired)
 2. ❌ Bulk employee invite
 3. ❌ Email notifications for payouts

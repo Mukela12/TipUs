@@ -22,9 +22,16 @@ import EmployeeTipsPage from '@/pages/employee/EmployeeTipsPage'
 import EmployeePayoutsPage from '@/pages/employee/EmployeePayoutsPage'
 import EmployeeProfilePage from '@/pages/employee/EmployeeProfilePage'
 
+// Admin Pages
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
+import AdminVenuesPage from '@/pages/admin/AdminVenuesPage'
+import AdminQRCodesPage from '@/pages/admin/AdminQRCodesPage'
+import AdminPayoutsPage from '@/pages/admin/AdminPayoutsPage'
+
 // Layout
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { EmployeeLayout } from '@/components/layout/EmployeeLayout'
+import { AdminLayout } from '@/components/layout/AdminLayout'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { ToastContainer } from '@/components/ui/ToastContainer'
 
@@ -68,6 +75,14 @@ export default function App() {
             <Route path="/employee/tips" element={<EmployeeTipsPage />} />
             <Route path="/employee/payouts" element={<EmployeePayoutsPage />} />
             <Route path="/employee/profile" element={<EmployeeProfilePage />} />
+          </Route>
+
+          {/* Admin dashboard */}
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/venues" element={<AdminVenuesPage />} />
+            <Route path="/admin/qr-codes" element={<AdminQRCodesPage />} />
+            <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
           </Route>
         </Route>
 

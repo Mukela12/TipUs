@@ -1,25 +1,22 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Menu, X, LogOut, LayoutDashboard, Users, DollarSign, Wallet, Settings } from 'lucide-react'
+import { Menu, X, LogOut, LayoutDashboard, Store, QrCode, Wallet } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
-import { useVenueStore } from '@/stores/venueStore'
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Employees', href: '/dashboard/employees', icon: Users },
-  { label: 'Tips', href: '/dashboard/tips', icon: DollarSign },
-  { label: 'Payouts', href: '/dashboard/payouts', icon: Wallet },
-  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { label: 'Venues', href: '/admin/venues', icon: Store },
+  { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode },
+  { label: 'Payouts', href: '/admin/payouts', icon: Wallet },
 ]
 
-export function MobileHeader() {
+export function AdminMobileHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const signOut = useAuthStore((s) => s.signOut)
-  const venue = useVenueStore((s) => s.venue)
 
   // Close on route change
   useEffect(() => {
@@ -54,12 +51,11 @@ export function MobileHeader() {
           )}
         </button>
 
-        <Link to="/dashboard" className="flex items-center gap-2">
+        <Link to="/admin" className="flex items-center gap-2">
           <img src="/savings.png" alt="TipUs" className="h-8 w-8 rounded-lg" />
-          <span className="text-lg font-semibold text-surface-900">TipUs</span>
+          <span className="text-lg font-semibold text-surface-900">TipUs Admin</span>
         </Link>
 
-        {/* Spacer to balance the layout */}
         <div style={{ width: '44px' }} />
       </div>
 
@@ -74,18 +70,11 @@ export function MobileHeader() {
             className="overflow-hidden border-t border-surface-200/60 bg-white/95 backdrop-blur-md"
           >
             <nav className="px-4 py-3 space-y-0.5 max-h-[70vh] overflow-y-auto">
-              {venue && (
-                <div className="px-3 pb-2 mb-2 border-b border-surface-200">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-surface-400">Venue</p>
-                  <p className="text-sm font-medium text-surface-700 truncate">{venue.name}</p>
-                </div>
-              )}
-
               {navItems.map((item) => (
                 <NavLink
                   key={item.href}
                   to={item.href}
-                  end={item.href === '/dashboard'}
+                  end={item.href === '/admin'}
                   className={({ isActive }) =>
                     cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors',

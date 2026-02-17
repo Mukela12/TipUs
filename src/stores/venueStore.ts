@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import { generateSlug } from '@/lib/utils'
+import { generateSlug, generateShortCode } from '@/lib/utils'
 import type { Venue } from '@/types'
 
 interface VenueState {
@@ -74,6 +74,16 @@ export const useVenueStore = create<VenueState>((set, get) => ({
       // Update auth user_metadata with venue_id
       await supabase.auth.updateUser({
         data: { venue_id: venue.id },
+      })
+
+      // Auto-create a default QR code for the venue
+      const shortCode = generateShortCode()
+      await supabase.from('qr_codes').insert({
+        venue_id: venue.id,
+        short_code: shortCode,
+        label: 'Main',
+        is_active: true,
+        scan_count: 0,
       })
 
       set({ venue, loading: false, initialized: true })

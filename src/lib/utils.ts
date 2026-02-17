@@ -45,3 +45,13 @@ export function generateSlug(text: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
 }
+
+/** Generate a random 8-character short code for QR codes. */
+export function generateShortCode(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let code = ''
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return code
+}

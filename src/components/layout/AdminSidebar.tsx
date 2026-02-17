@@ -1,40 +1,34 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
-  Users,
-  DollarSign,
+  Store,
+  QrCode,
   Wallet,
-  Settings,
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
-import { useVenueStore } from '@/stores/venueStore'
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Employees', href: '/dashboard/employees', icon: Users },
-  { label: 'Tips', href: '/dashboard/tips', icon: DollarSign },
-  { label: 'Payouts', href: '/dashboard/payouts', icon: Wallet },
-  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { label: 'Venues', href: '/admin/venues', icon: Store },
+  { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode },
+  { label: 'Payouts', href: '/admin/payouts', icon: Wallet },
 ]
 
-export function Sidebar() {
+export function AdminSidebar() {
   const signOut = useAuthStore((s) => s.signOut)
-  const venue = useVenueStore((s) => s.venue)
   const user = useAuthStore((s) => s.user)
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:w-64 bg-white border-r border-surface-200 shadow-soft">
-      {/* Logo + venue */}
+      {/* Logo */}
       <div className="border-b border-surface-200 px-5 py-4 shrink-0">
         <div className="flex items-center gap-2.5">
           <img src="/savings.png" alt="TipUs" className="h-9 w-9 rounded-lg shrink-0" />
           <div className="min-w-0">
             <span className="text-lg font-semibold text-surface-900">TipUs</span>
-            {venue && (
-              <p className="truncate text-xs text-surface-500 -mt-0.5">{venue.name}</p>
-            )}
+            <p className="truncate text-xs text-surface-500 -mt-0.5">Admin Panel</p>
           </div>
         </div>
       </div>
@@ -48,7 +42,7 @@ export function Sidebar() {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium text-surface-900 truncate leading-tight">
-                {user.full_name || 'Venue Owner'}
+                {user.full_name || 'Admin'}
               </p>
               <p className="text-[11px] text-surface-500 truncate">{user.email}</p>
             </div>
@@ -62,7 +56,7 @@ export function Sidebar() {
           <NavLink
             key={item.href}
             to={item.href}
-            end={item.href === '/dashboard'}
+            end={item.href === '/admin'}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-200',

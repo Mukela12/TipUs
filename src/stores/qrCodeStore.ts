@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import { generateShortCode } from '@/lib/utils'
 import type { QRCode } from '@/types'
 
 interface QRCodeWithEmployee extends QRCode {
@@ -20,15 +21,6 @@ interface QRCodeState {
   toggleActive: (id: string, isActive: boolean) => Promise<{ error: string | null }>
   deleteQRCode: (id: string) => Promise<{ error: string | null }>
   reset: () => void
-}
-
-function generateShortCode(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-  let code = ''
-  for (let i = 0; i < 8; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return code
 }
 
 export const useQRCodeStore = create<QRCodeState>((set) => ({

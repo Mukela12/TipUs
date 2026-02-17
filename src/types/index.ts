@@ -4,7 +4,7 @@ export * from './database'
 export interface AuthUser {
   id: string
   email: string
-  role: 'venue_owner' | 'employee'
+  role: 'venue_owner' | 'employee' | 'admin'
   venue_id?: string
   employee_id?: string
   full_name?: string

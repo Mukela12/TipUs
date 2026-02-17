@@ -1,17 +1,16 @@
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Users, DollarSign, Wallet, Settings } from 'lucide-react'
+import { LayoutDashboard, Store, QrCode, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { label: 'Home', href: '/dashboard', icon: LayoutDashboard, end: true },
-  { label: 'Team', href: '/dashboard/employees', icon: Users },
-  { label: 'Tips', href: '/dashboard/tips', icon: DollarSign },
-  { label: 'Pay', href: '/dashboard/payouts', icon: Wallet },
-  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { label: 'Home', href: '/admin', icon: LayoutDashboard, end: true },
+  { label: 'Venues', href: '/admin/venues', icon: Store },
+  { label: 'QR', href: '/admin/qr-codes', icon: QrCode },
+  { label: 'Payouts', href: '/admin/payouts', icon: Wallet },
 ]
 
-export function MobileBottomNav() {
+export function AdminMobileBottomNav() {
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-surface-200 shadow-soft">
       <nav className="flex items-center justify-around px-1 py-2">
@@ -27,7 +26,7 @@ export function MobileBottomNav() {
               <>
                 {isActive && (
                   <motion.div
-                    layoutId="mobile-nav-pill"
+                    layoutId="admin-nav-pill"
                     className="absolute inset-1 bg-primary-50 rounded-xl -z-10"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />

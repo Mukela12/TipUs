@@ -95,13 +95,20 @@ When the venue owner triggers a payout (manually or via auto-schedule), the `pro
 ### Step 4: Payout Execution
 
 When the venue owner confirms the payout, the `complete-payout` Edge Function:
-1. **Checks platform balance** — ensures enough funds are available (money is already on the platform)
+1. **Checks platform balance** — ensures enough funds are available (only for remaining unpaid distributions)
 2. **Keeps 5%** — platform fee is deducted during payout calculation
-3. For each employee:
+3. For each employee (skipping already-completed distributions):
    - Creates a Stripe Custom connected account (if first payout) with the employee's bank details
    - Transfers the employee's share from the platform to their connected account
+   - Marks the distribution as `completed` with the Stripe transfer ID
+   - If a transfer fails, marks that distribution as `failed` with the error message
    - Stripe automatically pays out from the connected account to the employee's bank
-4. Updates payout status to `completed`
+4. Updates payout status:
+   - `completed` — all distributions succeeded
+   - `partially_completed` — some succeeded, some failed (can be retried)
+   - `failed` — all distributions failed (can be retried)
+
+**Retry safety**: If a payout is `partially_completed` or `failed`, the venue owner can click "Retry Failed". Only distributions that haven't been completed are re-attempted — already-paid employees are never double-paid.
 
 ```
 TipUs Platform (100% of tips already here)
@@ -394,16 +401,28 @@ One payout per venue per period. Created by `process-payout`, executed by `compl
 ```
 id, venue_id, period_start, period_end,
 total_amount, platform_fee, net_amount,
-status (pending|processing|completed|failed),
+status (pending|processing|completed|partially_completed|failed),
 stripe_transfer_id, processed_at, created_at
 ```
 
+**Payout statuses:**
+- `pending` — created, awaiting execution
+- `processing` — transfers in progress
+- `completed` — all employee transfers succeeded
+- `partially_completed` — some transfers succeeded, some failed (can retry)
+- `failed` — all transfers failed (can retry)
+
 #### `payout_distributions`
-One row per employee per payout. Shows each employee's share.
+One row per employee per payout. Shows each employee's share and transfer status.
 ```
 id, payout_id, employee_id, amount,
-days_active, total_period_days, is_prorated, created_at
+days_active, total_period_days, is_prorated,
+status (pending|completed|failed),
+stripe_transfer_id, error_message,
+created_at
 ```
+
+Each distribution is tracked individually. When retrying a `partially_completed` or `failed` payout, only distributions with status `pending` or `failed` are processed — `completed` distributions are safely skipped, preventing double-payments.
 
 #### `employee_invitations` (schema only)
 Created during initial schema migration but not actively used — invitation tokens are stored directly on the `employees` table.
@@ -432,7 +451,7 @@ All Edge Functions are Deno-based, deployed with `--no-verify-jwt`, and handle a
 | `send-invite-email` | Venue owner adds employee | Sends invite email via Resend with setup link |
 | `accept-invitation` | Employee clicks setup link | Validates token, links auth user to employee record, saves bank details |
 | `process-payout` | Venue owner creates payout | Calculates tip totals, splits among employees (prorated), creates payout + distribution records |
-| `complete-payout` | Venue owner confirms payout | Checks platform balance, creates Stripe Custom accounts for employees, transfers funds |
+| `complete-payout` | Venue owner confirms payout | Checks platform balance, creates Stripe Custom accounts, transfers funds (per-distribution tracking, retry-safe) |
 | `auto-payout` | pg_cron daily at 2am UTC | Finds venues due for payout, runs process + complete pipeline automatically |
 
 ---

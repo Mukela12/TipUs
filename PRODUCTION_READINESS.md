@@ -290,19 +290,27 @@ For production, restrict this to your domain:
    - Total tips in period
    - 5% platform fee
    - Net amount split among employees (prorated by days active)
-4. Creates payout record (status: pending)
+4. Creates payout record (status: pending) with per-employee distributions
 5. Venue owner reviews and clicks "Execute Payout"
-6. System:
-   a. Verifies platform has sufficient available balance
+6. System processes each employee individually:
+   a. Verifies platform has sufficient available balance (only for unpaid distributions)
    b. Creates Stripe Custom accounts for employees (if first payout)
    c. Transfers each employee's share to their Custom account
-   d. Stripe automatically pays out from Custom account → employee bank
-7. Payout marked as completed
+   d. Marks each distribution as completed (with transfer ID) or failed (with error)
+   e. Stripe automatically pays out from Custom account → employee bank
+7. Payout status:
+   - completed → all transfers succeeded
+   - partially_completed → some succeeded, some failed
+   - failed → all transfers failed
+8. If partially_completed or failed: venue owner clicks "Retry Failed"
+   - Only failed/pending distributions are re-processed
+   - Already-completed distributions are safely skipped (no double-payments)
 ```
 
 **Production notes**:
 - Balance: platform needs sufficient available balance for transfers. Stripe processing fees and settlement timing can affect this. Ensure tips have settled (2-3 business days) before creating payouts.
 - Employee bank payouts: Stripe pays out to employee banks on a 2-business-day rolling schedule by default.
+- Each distribution tracks its own `status`, `stripe_transfer_id`, and `error_message` for full auditability.
 
 ### Journey 5: Auto-Payouts
 
@@ -321,7 +329,8 @@ For production, restrict this to your domain:
 **Production notes**:
 - Ensure pg_cron job is configured in Supabase (see README.md for SQL)
 - Auto-payout uses service_role_key for authentication
-- Failed auto-payouts are marked as "failed" and need manual intervention
+- Auto-payouts track per-distribution status (same as manual payouts)
+- Partially failed auto-payouts are marked as `partially_completed` — failed distributions can be retried manually from the venue dashboard
 
 ---
 
@@ -361,11 +370,11 @@ ALTER TABLE tips ADD CONSTRAINT tips_stripe_pi_unique UNIQUE (stripe_payment_int
 ```
 Then use `upsert` instead of `insert` in the webhook, or catch the unique violation.
 
-### 5. LOW: Payout Period Overlap
+### 5. LOW: Payout Period Overlap (Improved)
 
-The `process-payout` function queries existing payouts to avoid double-paying, but it only checks `pending` and `completed` payouts. A `failed` payout's tips could be included in a new payout for the same period.
+The `process-payout` function queries existing payouts to avoid double-paying, but it only checks `pending` and `completed` payouts. A `failed` or `partially_completed` payout's tips could be included in a new payout for the same period.
 
-**Current behavior**: This is intentional — failed payouts mean the money wasn't sent, so the tips should be retried. But the venue owner might see confusing duplicate payout records.
+**Current behavior**: This risk is significantly reduced by per-distribution status tracking. Venue owners should now retry `partially_completed` payouts using the "Retry Failed" button instead of creating new payouts for the same period. Consider adding `partially_completed` to the overlap check query.
 
 ### 6. LOW: scan_count Race Condition
 

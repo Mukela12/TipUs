@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import {
   DollarSign,
   Users,
-  QrCode,
   TrendingUp,
   Wallet,
   ArrowRight,
@@ -15,7 +14,6 @@ import { useVenueStore } from '@/stores/venueStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useEmployeeStore } from '@/stores/employeeStore'
 import { useTipStore } from '@/stores/tipStore'
-import { useQRCodeStore } from '@/stores/qrCodeStore'
 
 function getTimeGreeting(): string {
   const hour = new Date().getHours()
@@ -38,23 +36,20 @@ export default function DashboardPage() {
 
   const { employees, fetchEmployees } = useEmployeeStore()
   const { stats: tipStats, fetchTips } = useTipStore()
-  const { qrCodes, fetchQRCodes } = useQRCodeStore()
 
   useEffect(() => {
     if (venue?.id) {
       fetchEmployees(venue.id)
       fetchTips(venue.id)
-      fetchQRCodes(venue.id)
     }
-  }, [venue?.id, fetchEmployees, fetchTips, fetchQRCodes])
+  }, [venue?.id, fetchEmployees, fetchTips])
 
   const firstName = user?.full_name?.split(' ')[0] || 'there'
-  const totalScans = qrCodes.reduce((sum, qr) => sum + qr.scan_count, 0)
   const hasTips = tipStats.tipCount > 0
 
   const dynamicSubtitle = hasTips
     ? `Your team earned ${formatCurrency(tipStats.tipsThisWeek)} this week`
-    : 'Share your QR code to start collecting tips'
+    : 'Add employees and start collecting tips'
 
   const stats = [
     {
@@ -72,11 +67,11 @@ export default function DashboardPage() {
       href: '/dashboard/employees',
     },
     {
-      label: 'QR Scans',
-      value: String(totalScans),
-      icon: QrCode,
+      label: 'Payouts',
+      value: formatCurrency(tipStats.totalTips),
+      icon: Wallet,
       color: 'bg-info-light text-info',
-      href: '/dashboard/qr-codes',
+      href: '/dashboard/payouts',
     },
     {
       label: 'This Week',
@@ -89,7 +84,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* Greeting header — redesigned */}
+      {/* Greeting header */}
       <motion.div
         variants={fadeInUp}
         initial="hidden"
@@ -175,15 +170,15 @@ export default function DashboardPage() {
               </div>
             </Link>
             <Link
-              to="/dashboard/qr-codes"
+              to="/dashboard/settings"
               className="flex items-center gap-3 rounded-xl border border-surface-200 p-4 hover:bg-surface-50 transition-colors"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-info-light shrink-0">
-                <QrCode className="h-4 w-4 text-info" />
+                <DollarSign className="h-4 w-4 text-info" />
               </div>
               <div>
-                <p className="text-sm font-medium text-surface-900">Create QR code</p>
-                <p className="text-xs text-surface-500">Start collecting tips</p>
+                <p className="text-sm font-medium text-surface-900">Venue settings</p>
+                <p className="text-xs text-surface-500">Configure your venue</p>
               </div>
             </Link>
             <Link
@@ -194,8 +189,8 @@ export default function DashboardPage() {
                 <Wallet className="h-4 w-4 text-primary-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-surface-900">Set up payouts</p>
-                <p className="text-xs text-surface-500">Configure schedule</p>
+                <p className="text-sm font-medium text-surface-900">View payouts</p>
+                <p className="text-xs text-surface-500">See your history</p>
               </div>
             </Link>
           </div>

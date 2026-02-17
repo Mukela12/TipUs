@@ -18,6 +18,16 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace />
   }
 
+  // Admin routing
+  if (user.role === 'admin' && !location.pathname.startsWith('/admin')) {
+    return <Navigate to="/admin" replace />
+  }
+
+  // Prevent non-admins from accessing admin routes
+  if (user.role !== 'admin' && location.pathname.startsWith('/admin')) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   // Role-based routing: redirect employees away from venue-owner dashboard
   if (user.role === 'employee' && location.pathname.startsWith('/dashboard')) {
     return <Navigate to="/employee" replace />

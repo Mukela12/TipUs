@@ -1,6 +1,6 @@
 /** Core database types matching the Supabase schema from TIPUS_SYSTEM_DESIGN.md */
 
-export type UserRole = 'venue_owner' | 'employee'
+export type UserRole = 'venue_owner' | 'employee' | 'admin'
 
 export type EmployeeStatus = 'invited' | 'active' | 'inactive'
 export type PayoutStatus = 'pending' | 'processing' | 'completed' | 'partially_completed' | 'failed'
