@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { Payout, PayoutDistribution } from '@/types'
 
 interface DistributionWithEmployee extends PayoutDistribution {
-  employee_name?: string
+  employee_name?: string | undefined
 }
 
 interface PayoutWithDistributions extends Payout {
@@ -72,6 +72,9 @@ export const usePayoutStore = create<PayoutState>((set) => ({
           days_active: row.days_active,
           total_period_days: row.total_period_days,
           is_prorated: row.is_prorated,
+          status: row.status ?? 'pending',
+          stripe_transfer_id: row.stripe_transfer_id ?? null,
+          error_message: row.error_message ?? null,
           created_at: row.created_at,
           employee_name: employees?.name ?? undefined,
         }
@@ -146,17 +149,52 @@ export const usePayoutStore = create<PayoutState>((set) => ({
       })
 
       const data = await res.json()
-      if (!res.ok) return { error: data.error || `Request failed (${res.status})` }
 
-      // Update the payout in state
-      set((s) => ({
-        payouts: s.payouts.map((p) =>
-          p.id === payoutId
-            ? { ...p, status: 'completed' as const, processed_at: new Date().toISOString() }
-            : p
-        ),
-      }))
+      // 207 = partial success (some transfers failed), 2xx = full success
+      const isPartial = res.status === 207
+      if (!res.ok && !isPartial) return { error: data.error || `Request failed (${res.status})` }
 
+      // Re-fetch payouts to get updated statuses for both payout and distributions
+      const payoutRow = await supabase
+        .from('payouts')
+        .select('*')
+        .eq('id', payoutId)
+        .single()
+
+      if (payoutRow.data) {
+        const distRows = await supabase
+          .from('payout_distributions')
+          .select('*, employees(name)')
+          .eq('payout_id', payoutId)
+
+        const updatedDists: DistributionWithEmployee[] = (distRows.data ?? []).map((row) => {
+          const employees = (row as Record<string, unknown>).employees as { name: string } | null
+          return {
+            id: row.id,
+            payout_id: row.payout_id,
+            employee_id: row.employee_id,
+            amount: row.amount,
+            days_active: row.days_active,
+            total_period_days: row.total_period_days,
+            is_prorated: row.is_prorated,
+            status: row.status ?? 'pending',
+            stripe_transfer_id: row.stripe_transfer_id ?? null,
+            error_message: row.error_message ?? null,
+            created_at: row.created_at,
+            employee_name: employees?.name ?? undefined,
+          }
+        })
+
+        set((s) => ({
+          payouts: s.payouts.map((p) =>
+            p.id === payoutId
+              ? { ...payoutRow.data, distributions: updatedDists }
+              : p
+          ),
+        }))
+      }
+
+      if (isPartial) return { error: data.error || 'Some transfers failed' }
       return { error: null }
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Unknown error' }

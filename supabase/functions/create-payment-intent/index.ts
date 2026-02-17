@@ -32,10 +32,10 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Look up QR code → venue → stripe account
+    // Look up QR code → venue
     const { data: qrCode, error: qrError } = await supabase
       .from("qr_codes")
-      .select("id, venue_id, employee_id, scan_count, venues ( stripe_account_id, stripe_onboarding_complete, name )")
+      .select("id, venue_id, employee_id, scan_count, venues ( name )")
       .eq("id", qr_code_id)
       .eq("is_active", true)
       .single();
@@ -47,32 +47,21 @@ serve(async (req) => {
       );
     }
 
-    const venue = qrCode.venues as unknown as {
-      stripe_account_id: string | null;
-      stripe_onboarding_complete: boolean;
-      name: string;
-    };
+    const venue = qrCode.venues as unknown as { name: string };
 
-    if (!venue?.stripe_account_id || !venue?.stripe_onboarding_complete) {
+    if (!venue?.name) {
       return new Response(
-        JSON.stringify({ error: "This venue hasn't completed Stripe setup yet" }),
+        JSON.stringify({ error: "Venue not found" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-12-18.acacia" });
 
-    // Platform fee: 5% of the tip
-    const platformFee = Math.round(amount * 0.05);
-
-    // Create PaymentIntent with automatic transfer to venue's connected account
+    // Create PaymentIntent — money stays on TipUs platform (no transfer_data)
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency: "aud",
-      application_fee_amount: platformFee,
-      transfer_data: {
-        destination: venue.stripe_account_id,
-      },
       metadata: {
         qr_code_id,
         venue_id: qrCode.venue_id,

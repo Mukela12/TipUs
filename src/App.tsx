@@ -12,7 +12,6 @@ import PayoutsPage from '@/pages/dashboard/PayoutsPage'
 import QRCodesPage from '@/pages/dashboard/QRCodesPage'
 import SettingsPage from '@/pages/dashboard/SettingsPage'
 import OnboardingPage from '@/pages/onboarding/OnboardingPage'
-import StripeReturnPage from '@/pages/dashboard/StripeReturnPage'
 import TipPage from '@/pages/tip/TipPage'
 import EmployeeSetupPage from '@/pages/invite/EmployeeSetupPage'
 import NotFoundPage from '@/pages/NotFoundPage'
@@ -61,7 +60,6 @@ export default function App() {
             <Route path="/dashboard/payouts" element={<PayoutsPage />} />
             <Route path="/dashboard/qr-codes" element={<QRCodesPage />} />
             <Route path="/dashboard/settings" element={<SettingsPage />} />
-            <Route path="/dashboard/stripe-return" element={<StripeReturnPage />} />
           </Route>
 
           {/* Employee dashboard */}

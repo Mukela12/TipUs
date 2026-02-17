@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   DollarSign,
   Users,
   QrCode,
   TrendingUp,
-  CreditCard,
-  CheckCircle,
-  Loader2,
+  Wallet,
   ArrowRight,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -15,7 +13,6 @@ import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useVenueStore } from '@/stores/venueStore'
 import { useAuthStore } from '@/stores/authStore'
-import { useUIStore } from '@/stores/uiStore'
 import { useEmployeeStore } from '@/stores/employeeStore'
 import { useTipStore } from '@/stores/tipStore'
 import { useQRCodeStore } from '@/stores/qrCodeStore'
@@ -37,10 +34,7 @@ function getFormattedDate(): string {
 
 export default function DashboardPage() {
   const venue = useVenueStore((s) => s.venue)
-  const connectStripe = useVenueStore((s) => s.connectStripe)
   const user = useAuthStore((s) => s.user)
-  const addToast = useUIStore((s) => s.addToast)
-  const [connecting, setConnecting] = useState(false)
 
   const { employees, fetchEmployees } = useEmployeeStore()
   const { stats: tipStats, fetchTips } = useTipStore()
@@ -61,15 +55,6 @@ export default function DashboardPage() {
   const dynamicSubtitle = hasTips
     ? `Your team earned ${formatCurrency(tipStats.tipsThisWeek)} this week`
     : 'Share your QR code to start collecting tips'
-
-  async function handleConnectStripe() {
-    setConnecting(true)
-    const { error } = await connectStripe()
-    if (error) {
-      addToast({ type: 'error', title: 'Stripe connection failed', description: error })
-      setConnecting(false)
-    }
-  }
 
   const stats = [
     {
@@ -133,56 +118,6 @@ export default function DashboardPage() {
           </div>
         )}
       </motion.div>
-
-      {/* Stripe Connect banner */}
-      {venue && !venue.stripe_onboarding_complete && (
-        <motion.div
-          variants={fadeInUp}
-          initial="hidden"
-          animate="visible"
-          className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-warning/30 bg-warning-light p-4"
-        >
-          <div className="rounded-lg bg-warning/10 p-2 shrink-0 self-start">
-            <CreditCard className="h-5 w-5 text-warning-dark" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-warning-dark">
-              Connect Stripe to start accepting tips
-            </p>
-            <p className="text-xs text-warning-dark/70 mt-0.5">
-              Set up your Stripe account to receive digital tips from customers.
-            </p>
-          </div>
-          <button
-            onClick={handleConnectStripe}
-            disabled={connecting}
-            className="flex items-center justify-center gap-2 rounded-lg bg-warning px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-warning-dark disabled:opacity-50 shrink-0"
-          >
-            {connecting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {connecting ? 'Connecting...' : 'Connect Stripe'}
-          </button>
-        </motion.div>
-      )}
-
-      {/* Stripe connected */}
-      {venue?.stripe_onboarding_complete && (
-        <motion.div
-          variants={fadeInUp}
-          initial="hidden"
-          animate="visible"
-          className="mt-5 flex items-center gap-3 rounded-xl border border-success/30 bg-success-light p-4"
-        >
-          <div className="rounded-lg bg-success/10 p-2">
-            <CheckCircle className="h-5 w-5 text-success-dark" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-success-dark">Stripe connected</p>
-            <p className="text-xs text-success-dark/70">
-              Your account is set up and ready to accept tips.
-            </p>
-          </div>
-        </motion.div>
-      )}
 
       {/* Stats */}
       <motion.div
@@ -252,15 +187,15 @@ export default function DashboardPage() {
               </div>
             </Link>
             <Link
-              to="/dashboard/settings"
+              to="/dashboard/payouts"
               className="flex items-center gap-3 rounded-xl border border-surface-200 p-4 hover:bg-surface-50 transition-colors"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100 shrink-0">
-                <CreditCard className="h-4 w-4 text-primary-600" />
+                <Wallet className="h-4 w-4 text-primary-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-surface-900">Connect Stripe</p>
-                <p className="text-xs text-surface-500">Accept payments</p>
+                <p className="text-sm font-medium text-surface-900">Set up payouts</p>
+                <p className="text-xs text-surface-500">Configure schedule</p>
               </div>
             </Link>
           </div>

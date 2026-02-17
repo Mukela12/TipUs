@@ -3,7 +3,7 @@
 export type UserRole = 'venue_owner' | 'employee'
 
 export type EmployeeStatus = 'invited' | 'active' | 'inactive'
-export type PayoutStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type PayoutStatus = 'pending' | 'processing' | 'completed' | 'partially_completed' | 'failed'
 export type SubscriptionTier = 'free' | 'business'
 
 export interface Venue {
@@ -14,8 +14,6 @@ export interface Venue {
   description: string | null
   address: string | null
   logo_url: string | null
-  stripe_account_id: string | null
-  stripe_onboarding_complete: boolean
   subscription_tier: SubscriptionTier
   subscription_status: string | null
   is_active: boolean
@@ -78,6 +76,8 @@ export interface Payout {
   created_at: string
 }
 
+export type DistributionStatus = 'pending' | 'completed' | 'failed'
+
 export interface PayoutDistribution {
   id: string
   payout_id: string
@@ -86,6 +86,9 @@ export interface PayoutDistribution {
   days_active: number
   total_period_days: number
   is_prorated: boolean
+  status: DistributionStatus
+  stripe_transfer_id: string | null
+  error_message: string | null
   created_at: string
 }
 

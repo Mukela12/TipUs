@@ -1,6 +1,6 @@
 # TipUs — Project Progress & Continuation Guide
 
-> Last updated: 16 Feb 2026, Stripe Webhook Configured + README
+> Last updated: 17 Feb 2026, Platform-Direct Money Flow
 > Project: `/Users/mukelakatungu/tipus`
 > Supabase project: `ghxwritgesdhtoupwvwm` (Tipus, Sydney region)
 
@@ -8,7 +8,7 @@
 
 ## Current State: ~97% Complete — Production-Ready
 
-Both venue-owner and employee dashboards are fully functional. Logo integrated, role-based routing working, RLS policies in place, dead code removed, security audit passed. Stripe webhook endpoint configured and listening for `account.updated` + `payment_intent.succeeded`. Production build succeeds at ~210KB gzipped. **Remaining**: analytics charts (recharts installed but not wired), bulk employee invite, payout email notifications.
+Both venue-owner and employee dashboards are fully functional. Logo integrated, role-based routing working, RLS policies in place, dead code removed, security audit passed. Stripe webhook endpoint configured and listening for `payment_intent.succeeded`. Production build succeeds at ~210KB gzipped. **Remaining**: analytics charts (recharts installed but not wired), bulk employee invite, payout email notifications.
 
 ---
 
@@ -36,11 +36,26 @@ Both venue-owner and employee dashboards are fully functional. Logo integrated, 
      ▼                                  ▼
 ┌──────────────┐              ┌──────────────────┐
 │ Stripe       │              │ Resend           │
-│ Connect      │              │ (Email)          │
-│ Express      │              │ contact@         │
+│ Platform     │              │ (Email)          │
+│ (Direct)     │              │ contact@         │
 │              │              │ fluxium.dev      │
 └──────────────┘              └──────────────────┘
 ```
+
+---
+
+## Money Flow (Platform-Direct Model)
+
+```
+Customer → Stripe PaymentIntent → 100% stays on TipUs platform
+  → At payout time: Platform keeps 5% → Sends 95% to employee bank accounts
+```
+
+Key points:
+- **Venues never touch money or Stripe** — no Stripe Connect Express for venues
+- Tips are collected directly on the TipUs platform Stripe account
+- At payout time, platform checks balance, deducts 5% fee, and transfers to employees
+- Employees get Stripe Custom accounts (created at first payout) linked to their bank details
 
 ---
 
@@ -48,9 +63,10 @@ Both venue-owner and employee dashboards are fully functional. Logo integrated, 
 
 ### Journey 1: Venue Owner Setup ✅ COMPLETE
 ```
-Sign Up → Create Venue → Connect Stripe → Add Employees → Create QR Codes
-   ✅         ✅              ✅              ✅                ✅
+Sign Up → Create Venue → Add Employees → Create QR Codes → View Dashboard
+   ✅         ✅              ✅                ✅              ✅
 ```
+Note: Venue owners no longer need to connect Stripe. Tips work immediately.
 
 ### Journey 2: Employee Onboarding ✅ COMPLETE
 ```
@@ -70,7 +86,7 @@ Login → Role Check → Employee Dashboard → My Tips / Payouts / Profile
 Scan QR → See Tip Page → Select Amount → Pay with Stripe → Tip Recorded
   ✅         ✅              ✅              ✅              ✅
 ```
-**Status**: TipPage rewritten with Stripe Payment Element. `create-payment-intent` Edge Function creates PaymentIntents with 5% platform fee and auto-transfer. `stripe-webhook` handles `payment_intent.succeeded` to insert tip records. Webhook endpoint configured in Stripe Dashboard (destination: `whimsical-triumph`, listening for `account.updated` + `payment_intent.succeeded`).
+**Status**: TipPage rewritten with Stripe Payment Element. `create-payment-intent` Edge Function creates PaymentIntents (100% stays on platform, no transfer_data). `stripe-webhook` handles `payment_intent.succeeded` to insert tip records. Webhook endpoint configured in Stripe Dashboard.
 
 ### Journey 4: Payouts ✅ BUILT (automatic Stripe payouts + recurring schedule)
 ```
@@ -79,8 +95,8 @@ Accumulate Tips → Calculate Splits → Review → Execute Payout → Money Sen
 Configure Schedule → Cron Runs Daily → Auto Process + Execute → Funds Sent
        ✅                  ✅                   ✅                  ✅
 ```
-**Status**: `process-payout` Edge Function calculates per-employee splits prorated by days active. `complete-payout` now executes real Stripe payouts — adds employee bank accounts as external accounts on the venue's Stripe Connect account, then creates Stripe Payouts to each employee's bank. PayoutsPage has "Execute Payout" button with confirmation modal. Balance check prevents overdrafts.
-**Recurring**: `auto-payout` Edge Function triggered daily at 2am UTC via pg_cron + pg_net. Venue owners configure frequency (weekly/fortnightly/monthly) and day via PayoutsPage schedule card. Cron finds due venues and runs the full process+complete pipeline automatically.
+**Status**: `process-payout` Edge Function calculates per-employee splits prorated by days active. `complete-payout` checks platform balance and sends transfers to employee Custom Stripe accounts. No transfer reversals needed — money never leaves the platform.
+**Recurring**: `auto-payout` Edge Function triggered daily at 2am UTC via pg_cron + pg_net.
 
 ---
 
@@ -90,7 +106,6 @@ Configure Schedule → Cron Runs Daily → Auto Process + Execute → Funds Sent
 |---------|----------|---------|------------|
 | Auth (signup/login/logout) | ✅ | ✅ | ✅ Working |
 | Venue creation + onboarding | ✅ | ✅ | ✅ Working |
-| Stripe Connect (venue) | ✅ | ✅ | ✅ Working |
 | Employee CRUD | ✅ | ✅ | ✅ Working |
 | Employee invite emails | ✅ | ✅ | ✅ Working |
 | Employee setup (bank details) | ✅ | ✅ | ✅ Working |
@@ -98,11 +113,11 @@ Configure Schedule → Cron Runs Daily → Auto Process + Execute → Funds Sent
 | Dashboard stats | ✅ | ✅ | ✅ Working |
 | Tips list + filters | ✅ | ✅ | ✅ Working (data via webhook) |
 | Public tip page (QR scan) | ✅ | ✅ | ✅ Working |
-| Stripe payment processing | ✅ | ✅ | ✅ Working |
+| Stripe payment processing | ✅ | ✅ | ✅ Working (platform-direct) |
 | Tip recording in DB | N/A | ✅ | ✅ Working (via webhook) |
 | QR scan counting | N/A | ✅ | ✅ Working (via webhook) |
 | Payout calculation | ✅ | ✅ | ✅ Working (prorated by days active) |
-| Payout execution (Stripe) | ✅ | ✅ | ✅ Working (auto bank transfers) |
+| Payout execution (Stripe) | ✅ | ✅ | ✅ Working (platform → employees) |
 | Recurring scheduled payouts | ✅ | ✅ | ✅ Working (pg_cron + auto-payout) |
 | Employee dashboard | ✅ | ✅ | ✅ Working (Phase 7) |
 | Logo + branding | ✅ | N/A | ✅ Integrated (Phase 8) |
@@ -123,7 +138,7 @@ Configure Schedule → Cron Runs Daily → Auto Process + Execute → Funds Sent
 `computeStats()` in tipStore.ts filters on `status === 'succeeded'` — this is now correct since the webhook inserts tips with `status: 'succeeded'`.
 
 ### ✅ RESOLVED: Stripe Webhook Config
-Webhook endpoint configured in Stripe Dashboard (destination: `whimsical-triumph`). Listening for `account.updated` + `payment_intent.succeeded`. Signing secret updated in Supabase secrets.
+Webhook endpoint configured in Stripe Dashboard. Listening for `payment_intent.succeeded`. Signing secret updated in Supabase secrets.
 
 ---
 
@@ -132,10 +147,11 @@ Webhook endpoint configured in Stripe Dashboard (destination: `whimsical-triumph
 ### venues
 ```
 id, owner_id, name, slug, description, address, logo_url,
-stripe_account_id, stripe_onboarding_complete, subscription_tier,
-subscription_status, is_active, auto_payout_enabled, payout_frequency,
-payout_day, last_auto_payout_at, created_at, updated_at
+subscription_tier, subscription_status, is_active,
+auto_payout_enabled, payout_frequency, payout_day,
+last_auto_payout_at, created_at, updated_at
 ```
+Note: `stripe_account_id` and `stripe_onboarding_complete` removed — venues no longer connect Stripe.
 
 ### employees
 ```
@@ -180,7 +196,7 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 
 ## File Inventory
 
-### Pages (17 files)
+### Pages (16 files)
 | File | Route | Status |
 |------|-------|--------|
 | `src/pages/HomePage.tsx` | `/` | ✅ |
@@ -195,7 +211,6 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 | `src/pages/dashboard/PayoutsPage.tsx` | `/dashboard/payouts` | ✅ |
 | `src/pages/dashboard/QRCodesPage.tsx` | `/dashboard/qr-codes` | ✅ |
 | `src/pages/dashboard/SettingsPage.tsx` | `/dashboard/settings` | ✅ |
-| `src/pages/dashboard/StripeReturnPage.tsx` | `/dashboard/stripe-return` | ✅ |
 | `src/pages/employee/EmployeeDashboardPage.tsx` | `/employee` | ✅ Phase 7 |
 | `src/pages/employee/EmployeeTipsPage.tsx` | `/employee/tips` | ✅ Phase 7 |
 | `src/pages/employee/EmployeePayoutsPage.tsx` | `/employee/payouts` | ✅ Phase 7 |
@@ -205,7 +220,7 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 | Store | Status |
 |-------|--------|
 | `authStore.ts` | ✅ Fully functional (employee_id extraction) |
-| `venueStore.ts` | ✅ Fully functional |
+| `venueStore.ts` | ✅ Fully functional (connectStripe removed) |
 | `employeeStore.ts` | ✅ Fully functional |
 | `employeeDashboardStore.ts` | ✅ Employee tips, payouts, bank details |
 | `tipStore.ts` | ✅ Fully functional (data via webhook) |
@@ -216,14 +231,14 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 ### Edge Functions (9 files, ALL deployed with `--no-verify-jwt`)
 | Function | Purpose | Status |
 |----------|---------|--------|
-| `create-stripe-account` | Create Stripe Connect account + check status | ✅ |
-| `stripe-webhook` | Handle `account.updated` + `payment_intent.succeeded` | ✅ |
-| `create-payment-intent` | Create PaymentIntent with platform fee + auto-transfer | ✅ |
+| `create-stripe-account` | **DEPRECATED** (returns 410 Gone) | ✅ |
+| `stripe-webhook` | Handle `payment_intent.succeeded` | ✅ |
+| `create-payment-intent` | Create PaymentIntent (100% stays on platform) | ✅ |
 | `confirm-tip` | Confirm tip payment and update status | ✅ |
 | `send-invite-email` | Send employee invite via Resend | ✅ |
 | `accept-invitation` | Validate token + link user + save bank details | ✅ |
 | `process-payout` | Calculate payout splits + create payout record | ✅ |
-| `complete-payout` | Execute Stripe payouts to employee bank accounts | ✅ |
+| `complete-payout` | Check platform balance + transfer to employees | ✅ |
 | `auto-payout` | Cron-triggered recurring auto payout for all due venues | ✅ |
 
 ### Layout Components (9 files in `src/components/layout/`)
@@ -293,30 +308,29 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 
 ### Phase 5: Payment Flow ✅ COMPLETE
 1. ✅ Fixed TipPage.tsx bugs — completely rewritten with correct column names
-2. ✅ Created `create-payment-intent` Edge Function (5% platform fee, auto-transfer)
+2. ✅ Created `create-payment-intent` Edge Function (100% stays on platform)
 3. ✅ Wired TipPage to Stripe Payment Element (`@stripe/react-stripe-js`)
 4. ✅ Added `payment_intent.succeeded` handler to stripe-webhook
 5. ✅ Webhook inserts tip record in DB on successful payment
 6. ✅ `scan_count` incremented on payment initiation + success
-7. ✅ Stripe webhook endpoint configured (listening for `account.updated` + `payment_intent.succeeded`)
+7. ✅ Stripe webhook endpoint configured
 
 ### Phase 6: Payout System ✅ COMPLETE (with automatic Stripe payouts + recurring schedule)
 1. ✅ Created `process-payout` Edge Function (equal split, prorated by days active)
-2. ✅ Created `complete-payout` Edge Function — now executes real Stripe payouts
+2. ✅ Created `complete-payout` Edge Function — checks platform balance, transfers to employees
 3. ✅ Created `payoutStore.ts` Zustand store (fetch, create, complete)
 4. ✅ Created `PayoutsPage.tsx` with create form, payout list, expandable distributions
 5. ✅ Added Payouts nav item to Sidebar, MobileHeader, MobileBottomNav
 6. ✅ Added `/dashboard/payouts` route to App.tsx
-7. ✅ Automatic bank transfers via Stripe Payouts API on connected accounts
-8. ✅ Employee bank accounts added as external accounts on venue's Stripe Connect
-9. ✅ Balance check before executing payouts
-10. ✅ Confirmation modal before sending real money
-11. ✅ `stripe_bank_account_id` cached on employee records for repeat payouts
-12. ✅ Recurring schedule: `auto_payout_enabled`, `payout_frequency`, `payout_day`, `last_auto_payout_at` on venues
-13. ✅ `auto-payout` Edge Function — cron-triggered, processes all due venues automatically
-14. ✅ pg_cron job runs daily at 2am UTC via pg_net HTTP POST
-15. ✅ Schedule config UI on PayoutsPage (toggle, frequency, day picker, next payout date)
-16. ✅ `updatePayoutSchedule` method in venueStore
+7. ✅ Automatic bank transfers via Stripe Transfers API to employee Custom accounts
+8. ✅ Balance check before executing payouts
+9. ✅ Confirmation modal before sending real money
+10. ✅ `stripe_bank_account_id` cached on employee records for repeat payouts
+11. ✅ Recurring schedule: `auto_payout_enabled`, `payout_frequency`, `payout_day`, `last_auto_payout_at` on venues
+12. ✅ `auto-payout` Edge Function — cron-triggered, processes all due venues automatically
+13. ✅ pg_cron job runs daily at 2am UTC via pg_net HTTP POST
+14. ✅ Schedule config UI on PayoutsPage (toggle, frequency, day picker, next payout date)
+15. ✅ `updatePayoutSchedule` method in venueStore
 
 ### Phase 7: Employee Dashboard ✅ COMPLETE
 1. ✅ Added `employee_id` to `AuthUser` type
@@ -336,14 +350,25 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 2. ✅ LoginPage role-based redirect (employee → `/employee`, venue_owner → `/dashboard`)
 3. ✅ EmployeeSetupPage "Go to Dashboard" button on completion step
 4. ✅ Security audit — no secret keys in frontend, all `VITE_*` prefixed, `.env` gitignored
-5. ✅ Removed `ConnectionTestPage.tsx` + route
-6. ✅ Removed unused `vite.svg`
-7. ✅ Removed unused test functions (`testSupabaseConnection`, `testStripeConnection`)
-8. ✅ Removed unused types (`ApiResponse`, `StatCard`, `NavItem`, `EmployeeInvitation`, `InvitationStatus`, `VenueStatus`)
-9. ✅ TypeScript check passes (`npx tsc --noEmit`)
-10. ✅ Production build succeeds (~210KB gzipped)
+5. ✅ Removed unused pages, types, test functions
+6. ✅ TypeScript check passes (`npx tsc --noEmit`)
+7. ✅ Production build succeeds (~210KB gzipped)
 
-### Phase 9: Remaining Items (Future)
+### Phase 9: Platform-Direct Money Flow ✅ COMPLETE
+1. ✅ Removed `transfer_data` and `application_fee_amount` from `create-payment-intent` — money stays on platform
+2. ✅ Removed `account.updated` handler from `stripe-webhook` — no venue Stripe accounts to track
+3. ✅ Removed transfer reversal logic from `complete-payout` — money never left platform
+4. ✅ Removed transfer reversal logic from `auto-payout` — same simplification
+5. ✅ Deprecated `create-stripe-account` to 410 Gone
+6. ✅ Removed `connectStripe` from venueStore
+7. ✅ Removed Stripe banners from DashboardPage
+8. ✅ Removed Stripe settings card from SettingsPage
+9. ✅ Deleted StripeReturnPage + route
+10. ✅ Removed `stripe_account_id` and `stripe_onboarding_complete` from Venue type
+11. ✅ Created migration to drop venue Stripe columns
+12. ✅ Updated third quick-action card: "Set up payouts" → `/dashboard/payouts`
+
+### Phase 10: Remaining Items (Future)
 1. ❌ Analytics charts (recharts installed but not wired)
 2. ❌ Bulk employee invite
 3. ❌ Email notifications for payouts
@@ -356,9 +381,9 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 - **`supabase.functions.invoke()` bug**: Don't use. Use direct `fetch()` with explicit `Authorization` + `apikey` headers.
 - **Browser extension interference**: MetaMask's SES lockdown can strip `apikey` headers. Pass as URL parameter (`?apikey=KEY`) as fallback.
 - **Node version**: Vite 7 needs Node 20.19+ or 22.12+. Use `/Users/mukelakatungu/.nvm/versions/node/v22.22.0/bin/node` explicitly.
-- **Stripe test mode**: `details_submitted` is the reliable onboarding signal for test accounts.
 - **Amounts**: All tip amounts stored in **cents** in the DB, displayed with `formatCurrency()`.
-- **Payment flow**: TipPage → `create-payment-intent` (creates PaymentIntent with 5% fee + transfer) → Stripe Payment Element → `stripe-webhook` (records tip in DB).
+- **Payment flow**: TipPage → `create-payment-intent` (creates PaymentIntent, 100% on platform) → Stripe Payment Element → `stripe-webhook` (records tip in DB).
+- **Payout flow**: Platform balance check → Transfer to employee Custom Stripe accounts → Auto-payout to bank.
 - **Stripe Payment Element**: Uses `@stripe/react-stripe-js` with coral theme (`#d4856a`). Supports cards, wallets, etc.
 - **Migration files**: Renamed to timestamp format (`20260212000000_*.sql`). Previous migrations marked as applied via `supabase migration repair`.
 
@@ -372,7 +397,7 @@ id, venue_id, employee_id, token, status, expires_at, created_at
 | Styling | Tailwind CSS 4, Framer Motion 12 |
 | State | Zustand 5 |
 | Backend | Supabase (Postgres, Auth, Edge Functions) |
-| Payments | Stripe (Connect Express) |
+| Payments | Stripe (Platform-Direct) |
 | Email | Resend (`contact@fluxium.dev`) |
 | Icons | Lucide React |
 | QR Codes | qrcode.react 4 |

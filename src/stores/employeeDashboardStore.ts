@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { Employee, Tip, PayoutDistribution } from '@/types'
+import type { Employee, Tip, PayoutDistribution, DistributionStatus } from '@/types'
 
 interface TipWithEmployee extends Tip {
   employee_name?: string
@@ -178,6 +178,9 @@ export const useEmployeeDashboardStore = create<EmployeeDashboardState>((set) =>
             days_active: row.days_active as number,
             total_period_days: row.total_period_days as number,
             is_prorated: row.is_prorated as boolean,
+            status: ((row.status as string) ?? 'pending') as DistributionStatus,
+            stripe_transfer_id: (row.stripe_transfer_id as string | null) ?? null,
+            error_message: (row.error_message as string | null) ?? null,
             created_at: row.created_at as string,
             period_start: payout?.period_start,
             period_end: payout?.period_end,

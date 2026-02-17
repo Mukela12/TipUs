@@ -25,32 +25,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Handle account.updated — Stripe Connect onboarding completion
-    if (event.type === "account.updated") {
-      const account = event.data.object as Stripe.Account;
-
-      // In test mode, charges_enabled/payouts_enabled may not be set.
-      // Use details_submitted as the primary signal that onboarding is done.
-      const isComplete =
-        account.details_submitted ||
-        (account.charges_enabled && account.payouts_enabled);
-
-      console.log(`account.updated for ${account.id}: details_submitted=${account.details_submitted}, charges_enabled=${account.charges_enabled}, payouts_enabled=${account.payouts_enabled}, isComplete=${isComplete}`);
-
-      if (isComplete) {
-        const { error } = await supabase
-          .from("venues")
-          .update({ stripe_onboarding_complete: true })
-          .eq("stripe_account_id", account.id);
-
-        if (error) {
-          console.error("Failed to update venue:", error.message);
-        } else {
-          console.log(`Venue with Stripe account ${account.id} onboarding complete`);
-        }
-      }
-    }
-
     // Handle payment_intent.succeeded — record tip in database
     if (event.type === "payment_intent.succeeded") {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;

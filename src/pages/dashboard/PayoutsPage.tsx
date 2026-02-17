@@ -23,7 +23,16 @@ const statusStyles: Record<string, string> = {
   pending: 'bg-warning-light text-warning-dark border border-warning/20',
   processing: 'bg-info-light text-info-dark border border-info/20',
   completed: 'bg-success-light text-success-dark border border-success/20',
+  partially_completed: 'bg-warning-light text-warning-dark border border-warning/20',
   failed: 'bg-error-light text-error-dark border border-error/20',
+}
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pending',
+  processing: 'Processing',
+  completed: 'Completed',
+  partially_completed: 'Partial',
+  failed: 'Failed',
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -476,7 +485,7 @@ export default function PayoutsPage() {
                           statusStyles[payout.status] ?? statusStyles.pending
                         )}
                       >
-                        {payout.status}
+                        {statusLabels[payout.status] ?? payout.status}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-surface-500">
@@ -486,7 +495,7 @@ export default function PayoutsPage() {
                       className="px-5 py-3.5 text-right"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {payout.status === 'pending' && (
+                      {(payout.status === 'pending' || payout.status === 'partially_completed' || payout.status === 'failed') && (
                         <button
                           onClick={() => setConfirmPayoutId(payout.id)}
                           disabled={completingId === payout.id}
@@ -497,7 +506,7 @@ export default function PayoutsPage() {
                           ) : (
                             <Send className="h-3.5 w-3.5" />
                           )}
-                          Execute Payout
+                          {payout.status === 'pending' ? 'Execute Payout' : 'Retry Failed'}
                         </button>
                       )}
                     </td>
@@ -541,6 +550,9 @@ export default function PayoutsPage() {
                                   <span className="ml-2 text-xs text-surface-400">
                                     {dist.days_active}/{dist.total_period_days} days
                                   </span>
+                                  {dist.error_message && (
+                                    <p className="text-[10px] text-error-dark mt-0.5">{dist.error_message}</p>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -549,6 +561,12 @@ export default function PayoutsPage() {
                                     Prorated
                                   </span>
                                 )}
+                                <span className={cn(
+                                  'rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+                                  statusStyles[dist.status] ?? statusStyles.pending
+                                )}>
+                                  {dist.status === 'completed' ? 'Sent' : dist.status === 'failed' ? 'Failed' : 'Pending'}
+                                </span>
                                 <span className="text-sm font-semibold text-surface-900 tabular-nums">
                                   {formatCurrency(dist.amount)}
                                 </span>
@@ -582,11 +600,11 @@ export default function PayoutsPage() {
                   </div>
                   <span
                     className={cn(
-                      'rounded-md px-2 py-0.5 text-xs font-medium capitalize shrink-0',
+                      'rounded-md px-2 py-0.5 text-xs font-medium shrink-0',
                       statusStyles[payout.status] ?? statusStyles.pending
                     )}
                   >
-                    {payout.status}
+                    {statusLabels[payout.status] ?? payout.status}
                   </span>
                 </div>
 
@@ -656,11 +674,22 @@ export default function PayoutsPage() {
                                   {dist.days_active}/{dist.total_period_days} days
                                   {dist.is_prorated && ' (prorated)'}
                                 </p>
+                                {dist.error_message && (
+                                  <p className="text-[10px] text-error-dark mt-0.5">{dist.error_message}</p>
+                                )}
                               </div>
                             </div>
-                            <span className="text-xs font-semibold text-surface-900 tabular-nums">
-                              {formatCurrency(dist.amount)}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn(
+                                'rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+                                statusStyles[dist.status] ?? statusStyles.pending
+                              )}>
+                                {dist.status === 'completed' ? 'Sent' : dist.status === 'failed' ? 'Failed' : 'Pending'}
+                              </span>
+                              <span className="text-xs font-semibold text-surface-900 tabular-nums">
+                                {formatCurrency(dist.amount)}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -669,7 +698,7 @@ export default function PayoutsPage() {
                 </AnimatePresence>
 
                 {/* Execute payout button */}
-                {payout.status === 'pending' && (
+                {(payout.status === 'pending' || payout.status === 'partially_completed' || payout.status === 'failed') && (
                   <div className="mt-3 border-t border-surface-200/40 pt-3">
                     <button
                       onClick={() => setConfirmPayoutId(payout.id)}
@@ -681,7 +710,7 @@ export default function PayoutsPage() {
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
-                      Execute Payout
+                      {payout.status === 'pending' ? 'Execute Payout' : 'Retry Failed'}
                     </button>
                   </div>
                 )}
@@ -718,7 +747,9 @@ export default function PayoutsPage() {
                 </h3>
               </div>
               <p className="text-sm text-surface-600 mb-1">
-                This will transfer real money from your Stripe balance to each employee's bank account.
+                {payouts.find((p) => p.id === confirmPayoutId)?.status === 'pending'
+                  ? "This will transfer real money from your Stripe balance to each employee's bank account."
+                  : "This will retry sending to employees whose transfers previously failed. Already-completed transfers will not be re-sent."}
               </p>
               <p className="text-sm font-medium text-surface-900 mb-5">
                 Amount:{' '}

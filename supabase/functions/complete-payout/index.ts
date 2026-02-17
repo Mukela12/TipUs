@@ -38,7 +38,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-12-18.acacia" });
 
-    // 1. Fetch payout and verify status
+    // 1. Fetch payout — allow pending, partially_completed, or failed
     const { data: payout, error: payoutError } = await supabase
       .from("payouts")
       .select("id, venue_id, total_amount, platform_fee, net_amount, status, period_start, period_end")
@@ -49,35 +49,18 @@ serve(async (req) => {
       return jsonResponse({ error: "Payout not found" }, 404);
     }
 
-    if (payout.status !== "pending") {
+    const retryableStatuses = ["pending", "partially_completed", "failed"];
+    if (!retryableStatuses.includes(payout.status)) {
       return jsonResponse(
         { error: `Cannot execute payout with status '${payout.status}'` },
         400
       );
     }
 
-    // 2. Fetch venue to get stripe_account_id
-    const { data: venue, error: venueError } = await supabase
-      .from("venues")
-      .select("id, stripe_account_id")
-      .eq("id", payout.venue_id)
-      .single();
-
-    if (venueError || !venue) {
-      return jsonResponse({ error: "Venue not found" }, 404);
-    }
-
-    if (!venue.stripe_account_id) {
-      return jsonResponse(
-        { error: "Venue has no Stripe Connect account. Please complete Stripe onboarding first." },
-        400
-      );
-    }
-
-    // 3. Fetch distributions with employee bank details
+    // 2. Fetch distributions with employee bank details
     const { data: distributions, error: distError } = await supabase
       .from("payout_distributions")
-      .select("id, employee_id, amount, employees(id, name, email, bank_bsb, bank_account_number, bank_account_name, stripe_bank_account_id)")
+      .select("id, employee_id, amount, status, stripe_transfer_id, error_message, employees(id, name, email, bank_bsb, bank_account_number, bank_account_name, stripe_bank_account_id)")
       .eq("payout_id", payout_id);
 
     if (distError || !distributions || distributions.length === 0) {
@@ -87,9 +70,30 @@ serve(async (req) => {
       );
     }
 
-    // 4. Verify all employees have bank details
+    // 3. Separate completed vs remaining distributions
+    const completedDists = distributions.filter((d) => d.status === "completed");
+    const remainingDists = distributions.filter((d) => d.status !== "completed");
+
+    if (remainingDists.length === 0) {
+      // All already completed — mark payout as completed
+      await supabase
+        .from("payouts")
+        .update({ status: "completed", processed_at: new Date().toISOString() })
+        .eq("id", payout_id);
+
+      return jsonResponse({
+        success: true,
+        message: "All distributions already completed",
+        results: completedDists.map((d) => ({
+          employee_id: d.employee_id,
+          status: "already_completed",
+        })),
+      });
+    }
+
+    // 4. Verify remaining employees have bank details
     const missingBank: string[] = [];
-    for (const dist of distributions) {
+    for (const dist of remainingDists) {
       const emp = (dist as Record<string, unknown>).employees as {
         id: string;
         name: string;
@@ -114,12 +118,10 @@ serve(async (req) => {
       );
     }
 
-    const totalNeeded = distributions.reduce((sum, d) => sum + d.amount, 0);
+    // 5. Only need balance for remaining (non-completed) distributions
+    const totalNeeded = remainingDists.reduce((sum, d) => sum + d.amount, 0);
 
-    // 5. Handle balance: reverse auto-transfers OR fund in test mode
     if (isTestMode) {
-      // TEST MODE: Skip transfer reversal entirely — fund available balance
-      // using tok_bypassPending which bypasses the pending period
       const fundAmount = totalNeeded + 500;
       console.log(`Test mode: funding platform with $${(fundAmount / 100).toFixed(2)} using tok_bypassPending`);
       await stripe.charges.create({
@@ -130,70 +132,29 @@ serve(async (req) => {
       });
       console.log(`Test mode: funded successfully`);
     } else {
-      // PRODUCTION: Reverse auto-transfers to bring money back to platform
-      const { data: tips } = await supabase
-        .from("tips")
-        .select("id, amount, stripe_payment_intent_id")
-        .eq("venue_id", payout.venue_id)
-        .eq("status", "succeeded")
-        .gte("created_at", payout.period_start)
-        .lte("created_at", `${payout.period_end}T23:59:59.999Z`);
-
-      let totalReversed = 0;
-      for (const tip of tips ?? []) {
-        if (!tip.stripe_payment_intent_id) continue;
-        try {
-          const pi = await stripe.paymentIntents.retrieve(tip.stripe_payment_intent_id, {
-            expand: ["latest_charge"],
-          });
-
-          // Try pi.transfer first, then fall back to latest_charge.transfer
-          let transferId: string | null = null;
-          if (pi.transfer) {
-            transferId = typeof pi.transfer === "string" ? pi.transfer : pi.transfer.id;
-          } else if (pi.latest_charge && typeof pi.latest_charge !== "string") {
-            const charge = pi.latest_charge as Stripe.Charge;
-            if (charge.transfer) {
-              transferId = typeof charge.transfer === "string" ? charge.transfer : charge.transfer.id;
-            }
-          }
-
-          if (transferId) {
-            const transfer = await stripe.transfers.retrieve(transferId);
-            const unreversedAmount = transfer.amount - (transfer.amount_reversed ?? 0);
-            if (unreversedAmount > 0) {
-              await stripe.transfers.createReversal(transferId, { amount: unreversedAmount });
-              totalReversed += unreversedAmount;
-              console.log(`Reversed transfer ${transferId}: $${(unreversedAmount / 100).toFixed(2)}`);
-            }
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`Failed to reverse transfer for tip ${tip.id}: ${msg}`);
-        }
-      }
-
-      console.log(`Total reversed: $${(totalReversed / 100).toFixed(2)}, net needed: $${(payout.net_amount / 100).toFixed(2)}`);
-
-      // Check platform balance
       const platformBalance = await stripe.balance.retrieve();
-      const availableAud = platformBalance.available.find((b) => b.currency === "aud")?.amount ?? 0;
-
+      const availableAud = platformBalance.available.find(
+        (b) => b.currency === "aud"
+      )?.amount ?? 0;
       if (availableAud < totalNeeded) {
-        return jsonResponse(
-          {
-            error: `Insufficient platform balance. Available: $${(availableAud / 100).toFixed(2)}, needed: $${(totalNeeded / 100).toFixed(2)}. Ensure tip payments have settled.`,
-          },
-          400
-        );
+        return jsonResponse({
+          error: `Insufficient platform balance. Available: $${(availableAud / 100).toFixed(2)}, needed: $${(totalNeeded / 100).toFixed(2)}. Ensure tip payments have settled.`,
+        }, 400);
       }
     }
 
-    // 6. Process each distribution — transfer to employee connected accounts
-    const results: { employee_id: string; employee_name: string; status: string; error?: string }[] = [];
-    let allSucceeded = true;
+    // 6. Mark payout as processing
+    await supabase
+      .from("payouts")
+      .update({ status: "processing" })
+      .eq("id", payout_id);
 
-    for (const dist of distributions) {
+    // 7. Process each REMAINING distribution individually
+    const results: { employee_id: string; employee_name: string; status: string; error?: string }[] = [];
+    let succeededCount = 0;
+    let failedCount = 0;
+
+    for (const dist of remainingDists) {
       const emp = (dist as Record<string, unknown>).employees as {
         id: string;
         name: string;
@@ -274,15 +235,36 @@ serve(async (req) => {
 
         console.log(`Transfer ${transfer.id} created for ${emp.name}: $${(dist.amount / 100).toFixed(2)}`);
 
+        // Mark this distribution as completed
+        await supabase
+          .from("payout_distributions")
+          .update({
+            status: "completed",
+            stripe_transfer_id: transfer.id,
+            error_message: null,
+          })
+          .eq("id", dist.id);
+
+        succeededCount++;
         results.push({
           employee_id: emp.id,
           employee_name: emp.name,
-          status: "success",
+          status: "completed",
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         console.error(`Payout failed for ${emp.name}:`, message);
-        allSucceeded = false;
+
+        // Mark this distribution as failed
+        await supabase
+          .from("payout_distributions")
+          .update({
+            status: "failed",
+            error_message: message,
+          })
+          .eq("id", dist.id);
+
+        failedCount++;
         results.push({
           employee_id: emp.id,
           employee_name: emp.name,
@@ -292,23 +274,28 @@ serve(async (req) => {
       }
     }
 
-    // 7. Update payout status based on results
-    const newStatus = allSucceeded ? "completed" : "failed";
-    const { data: updated, error: updateError } = await supabase
+    // 8. Determine final payout status
+    const totalCompleted = completedDists.length + succeededCount;
+    const totalDists = distributions.length;
+    let newStatus: string;
+
+    if (failedCount === 0) {
+      newStatus = "completed";
+    } else if (totalCompleted > 0) {
+      newStatus = "partially_completed";
+    } else {
+      newStatus = "failed";
+    }
+
+    await supabase
       .from("payouts")
       .update({
         status: newStatus,
         processed_at: new Date().toISOString(),
       })
-      .eq("id", payout_id)
-      .select()
-      .single();
+      .eq("id", payout_id);
 
-    if (updateError) {
-      console.error("Failed to update payout status:", updateError.message);
-    }
-
-    if (!allSucceeded) {
+    if (failedCount > 0) {
       const failedNames = results
         .filter((r) => r.status === "failed")
         .map((r) => `${r.employee_name}: ${r.error}`)
@@ -317,18 +304,30 @@ serve(async (req) => {
       return jsonResponse(
         {
           error: `Some payouts failed: ${failedNames}`,
+          status: newStatus,
+          summary: {
+            total: totalDists,
+            completed: totalCompleted,
+            failed: failedCount,
+            previously_completed: completedDists.length,
+          },
           results,
-          payout: updated,
         },
-        500
+        207 // Multi-Status: partial success
       );
     }
 
-    console.log(`All payouts completed for payout ${payout_id}`);
+    console.log(`All payouts completed for payout ${payout_id} (${totalCompleted}/${totalDists})`);
 
     return jsonResponse({
       success: true,
-      payout: updated,
+      status: newStatus,
+      summary: {
+        total: totalDists,
+        completed: totalCompleted,
+        failed: 0,
+        previously_completed: completedDists.length,
+      },
       results,
     });
   } catch (err) {

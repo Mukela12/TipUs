@@ -39,7 +39,7 @@ serve(async (req) => {
     // 1. Query all venues with auto payouts enabled
     const { data: venues, error: venueError } = await supabase
       .from("venues")
-      .select("id, name, stripe_account_id, auto_payout_enabled, payout_frequency, payout_day, last_auto_payout_at")
+      .select("id, name, auto_payout_enabled, payout_frequency, payout_day, last_auto_payout_at")
       .eq("auto_payout_enabled", true);
 
     if (venueError) {
@@ -85,11 +85,6 @@ serve(async (req) => {
 
     for (const venue of dueVenues) {
       try {
-        if (!venue.stripe_account_id) {
-          results.push({ venue_id: venue.id, venue_name: venue.name, status: "skipped", error: "No Stripe Connect account" });
-          continue;
-        }
-
         // Calculate period
         const lastRun = venue.last_auto_payout_at ? new Date(venue.last_auto_payout_at) : null;
         let periodStart: Date;
@@ -261,7 +256,7 @@ serve(async (req) => {
         // Fetch distributions with employee bank details
         const { data: distWithEmp, error: distFetchError } = await supabase
           .from("payout_distributions")
-          .select("id, employee_id, amount, employees(id, name, email, bank_bsb, bank_account_number, bank_account_name, stripe_bank_account_id)")
+          .select("id, employee_id, amount, status, stripe_transfer_id, error_message, employees(id, name, email, bank_bsb, bank_account_number, bank_account_name, stripe_bank_account_id)")
           .eq("payout_id", payout.id);
 
         if (distFetchError || !distWithEmp || distWithEmp.length === 0) {
@@ -289,34 +284,7 @@ serve(async (req) => {
           continue;
         }
 
-        // Reverse auto-transfers from tips
-        const { data: periodTips } = await supabase
-          .from("tips")
-          .select("id, amount, stripe_payment_intent_id")
-          .eq("venue_id", venue.id)
-          .eq("status", "succeeded")
-          .gte("created_at", periodStartStr)
-          .lte("created_at", `${periodEndStr}T23:59:59.999Z`);
-
-        for (const tip of periodTips ?? []) {
-          if (!tip.stripe_payment_intent_id) continue;
-          try {
-            const pi = await stripe.paymentIntents.retrieve(tip.stripe_payment_intent_id);
-            if (pi.transfer) {
-              const transferId = typeof pi.transfer === "string" ? pi.transfer : pi.transfer.id;
-              const transfer = await stripe.transfers.retrieve(transferId);
-              const unreversedAmount = transfer.amount - (transfer.amount_reversed ?? 0);
-              if (unreversedAmount > 0) {
-                await stripe.transfers.createReversal(transferId, { amount: unreversedAmount });
-              }
-            }
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.warn(`Failed to reverse transfer for tip ${tip.id}: ${msg}`);
-          }
-        }
-
-        // Ensure platform has sufficient balance
+        // Verify platform balance (money stays on platform — no reversals needed)
         const totalNeeded = distWithEmp.reduce((sum, d) => sum + d.amount, 0);
         const platformBalance = await stripe.balance.retrieve();
         const availableAud = platformBalance.available.find((b) => b.currency === "aud")?.amount ?? 0;
@@ -346,9 +314,17 @@ serve(async (req) => {
           }
         }
 
-        // Execute transfers to each employee
-        let allSucceeded = true;
+        // Execute transfers to each employee — track individually
+        let succeededCount = 0;
+        let failedCount = 0;
+
         for (const dist of distWithEmp) {
+          // Skip already-completed distributions (safety for retries)
+          if (dist.status === "completed") {
+            succeededCount++;
+            continue;
+          }
+
           const emp = (dist as Record<string, unknown>).employees as {
             id: string; name: string; email: string;
             bank_bsb: string | null; bank_account_number: string | null;
@@ -412,21 +388,52 @@ serve(async (req) => {
               console.log(`Created Custom account ${employeeStripeAccountId} for ${emp.name}`);
             }
 
-            await stripe.transfers.create({
+            const transfer = await stripe.transfers.create({
               amount: dist.amount,
               currency: "aud",
               destination: employeeStripeAccountId,
               description: `TipUs auto-payout for ${emp.name}`,
             });
+
+            // Mark distribution as completed
+            await supabase
+              .from("payout_distributions")
+              .update({
+                status: "completed",
+                stripe_transfer_id: transfer.id,
+                error_message: null,
+              })
+              .eq("id", dist.id);
+
+            succeededCount++;
           } catch (err) {
             const message = err instanceof Error ? err.message : "Unknown error";
             console.error(`Auto-payout transfer failed for ${emp.name}:`, message);
-            allSucceeded = false;
+
+            // Mark distribution as failed
+            await supabase
+              .from("payout_distributions")
+              .update({
+                status: "failed",
+                error_message: message,
+              })
+              .eq("id", dist.id);
+
+            failedCount++;
           }
         }
 
-        // Update payout status
-        const newStatus = allSucceeded ? "completed" : "failed";
+        // Determine payout status based on individual results
+        const totalDists = distWithEmp.length;
+        let newStatus: string;
+        if (failedCount === 0) {
+          newStatus = "completed";
+        } else if (succeededCount > 0) {
+          newStatus = "partially_completed";
+        } else {
+          newStatus = "failed";
+        }
+
         await supabase
           .from("payouts")
           .update({ status: newStatus, processed_at: new Date().toISOString() })
@@ -441,11 +448,11 @@ serve(async (req) => {
         results.push({
           venue_id: venue.id,
           venue_name: venue.name,
-          status: allSucceeded ? "completed" : "partial_failure",
+          status: newStatus,
           payout_id: payout.id,
         });
 
-        console.log(`Auto-payout ${allSucceeded ? "completed" : "partial failure"} for venue ${venue.name} (${venue.id}), payout ${payout.id}`);
+        console.log(`Auto-payout ${newStatus} for venue ${venue.name} (${venue.id}), payout ${payout.id} — ${succeededCount}/${totalDists} succeeded`);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         console.error(`Auto-payout error for venue ${venue.name}:`, message);
@@ -454,7 +461,7 @@ serve(async (req) => {
     }
 
     const succeeded = results.filter((r) => r.status === "completed").length;
-    const failed = results.filter((r) => r.status === "failed" || r.status === "partial_failure").length;
+    const failed = results.filter((r) => r.status === "failed" || r.status === "partially_completed").length;
     const skipped = results.filter((r) => r.status === "skipped").length;
 
     console.log(`Auto-payout run complete: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped`);

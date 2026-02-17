@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Store,
-  CreditCard,
   User,
-  CheckCircle,
-  AlertCircle,
   Loader2,
   Save,
 } from 'lucide-react'
@@ -16,7 +13,6 @@ import { useUIStore } from '@/stores/uiStore'
 
 export default function SettingsPage() {
   const venue = useVenueStore((s) => s.venue)
-  const connectStripe = useVenueStore((s) => s.connectStripe)
   const updateVenue = useVenueStore((s) => s.updateVenue)
   const user = useAuthStore((s) => s.user)
   const addToast = useUIStore((s) => s.addToast)
@@ -25,7 +21,6 @@ export default function SettingsPage() {
   const [venueAddress, setVenueAddress] = useState('')
   const [venueDescription, setVenueDescription] = useState('')
   const [saving, setSaving] = useState(false)
-  const [connecting, setConnecting] = useState(false)
 
   useEffect(() => {
     if (venue) {
@@ -52,15 +47,6 @@ export default function SettingsPage() {
       addToast({ type: 'success', title: 'Venue updated' })
     }
     setSaving(false)
-  }
-
-  async function handleConnectStripe() {
-    setConnecting(true)
-    const { error } = await connectStripe()
-    if (error) {
-      addToast({ type: 'error', title: 'Stripe connection failed', description: error })
-      setConnecting(false)
-    }
   }
 
   const inputClass =
@@ -147,62 +133,6 @@ export default function SettingsPage() {
               </button>
             </div>
           </form>
-        </motion.div>
-
-        {/* Stripe */}
-        <motion.div variants={fadeInUp} className="glass-effect rounded-xl">
-          <div className="border-b border-surface-200/50 px-5 py-4 sm:px-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-100">
-                <CreditCard className="h-4.5 w-4.5 text-accent-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-surface-900">Stripe</h2>
-                <p className="text-xs text-surface-500">Payment processing for tips.</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-5 sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                {venue?.stripe_onboarding_complete ? (
-                  <>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success-light">
-                      <CheckCircle className="h-4 w-4 text-success-dark" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-surface-900">Connected</p>
-                      <p className="text-xs text-surface-500">Your Stripe account is active.</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning-light">
-                      <AlertCircle className="h-4 w-4 text-warning-dark" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-surface-900">Not connected</p>
-                      <p className="text-xs text-surface-500">
-                        Connect Stripe to accept tips.
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-              <button
-                onClick={handleConnectStripe}
-                disabled={connecting}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-surface-900 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-surface-800 disabled:opacity-50 disabled:cursor-not-allowed self-start"
-              >
-                {connecting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {venue?.stripe_onboarding_complete
-                  ? 'Reconnect Stripe'
-                  : connecting
-                    ? 'Connecting...'
-                    : 'Connect Stripe'}
-              </button>
-            </div>
-          </div>
         </motion.div>
 
         {/* Account */}

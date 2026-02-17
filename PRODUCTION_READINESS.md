@@ -23,10 +23,7 @@ This document covers everything needed to switch TipUs from Stripe test mode to 
 ### Stripe Account Requirements
 
 - [ ] Stripe account verified with real business details (ABN, address, bank account)
-- [ ] Stripe Connect enabled on the account (Settings > Connect)
-- [ ] Platform profile completed (branding, support URL, privacy policy)
 - [ ] Live API keys generated (Dashboard > Developers > API keys)
-- [ ] Stripe Connect Express account type approved for your platform
 
 ### Infrastructure
 
@@ -39,7 +36,6 @@ This document covers everything needed to switch TipUs from Stripe test mode to 
 
 - [ ] Terms of Service URL
 - [ ] Privacy Policy URL
-- [ ] Stripe Connect platform agreement accepted
 
 ---
 
@@ -60,18 +56,8 @@ Go to [Stripe Dashboard > Developers > Webhooks](https://dashboard.stripe.com/we
 Create a new endpoint:
 - **URL**: `https://ghxwritgesdhtoupwvwm.supabase.co/functions/v1/stripe-webhook`
 - **Events to listen for**:
-  - `account.updated`
   - `payment_intent.succeeded`
 - **Copy the signing secret**: `whsec_live_...`
-
-### Step 3: Configure Connect Settings
-
-Go to [Stripe Dashboard > Settings > Connect](https://dashboard.stripe.com/settings/connect):
-
-- **Branding**: Upload TipUs logo, set brand color
-- **Onboarding**: Set to "Express" account type
-- **Payout schedule**: Set default (Stripe handles this per connected account)
-- **Platform profile**: Business name, support email, privacy URL, terms URL
 
 ---
 
@@ -81,7 +67,7 @@ Go to [Stripe Dashboard > Settings > Connect](https://dashboard.stripe.com/setti
 
 The `complete-payout` function creates Stripe Custom connected accounts for employees with **hardcoded test data** that MUST be changed for production.
 
-**File**: `supabase/functions/complete-payout/index.ts` (lines 216-261)
+**File**: `supabase/functions/complete-payout/index.ts`
 
 Current test-mode code:
 ```typescript
@@ -117,9 +103,7 @@ Instead of Custom accounts (which require you to collect identity details), use 
 - You DON'T need to collect phone, DOB, address, tax ID from employees
 - Stripe handles KYC/identity verification
 - Employee just enters bank details + verifies identity through Stripe's UI
-- You send them a Stripe onboarding link (like you do for venue owners)
-
-This requires adding an employee Stripe onboarding step to the employee setup flow.
+- You send them a Stripe onboarding link
 
 **Option B: Collect real employee data**
 
@@ -133,19 +117,19 @@ If staying with Custom accounts, you need to:
 
 ### Same Issue in auto-payout
 
-**File**: `supabase/functions/auto-payout/index.ts` (lines 352-394)
+**File**: `supabase/functions/auto-payout/index.ts`
 
 Contains the same hardcoded test data for Custom account creation. Any changes to `complete-payout` must also be applied here.
 
 ### Test Mode Guard
 
-The `complete-payout` function has a test-mode-only code path (lines 120-131) that creates fake charges to fund the platform balance. This code is guarded by `isTestMode` and will NOT run in production — no changes needed, but be aware it exists.
+The `complete-payout` function has a test-mode-only code path that creates fake charges to fund the platform balance. This code is guarded by `isTestMode` and will NOT run in production — no changes needed, but be aware it exists.
 
 ```typescript
 if (isTestMode) {
   // This block only runs with sk_test_ keys
   // It creates a charge with tok_bypassPending to fund available balance
-  // In production, the real money flow handles this
+  // In production, real tip payments provide the balance
 }
 ```
 
@@ -185,9 +169,8 @@ VITE_APP_URL=https://your-production-domain.com                 (CHANGE)
 
 1. Redeploy all Edge Functions:
 ```bash
-supabase functions deploy create-stripe-account --no-verify-jwt
-supabase functions deploy stripe-webhook --no-verify-jwt
 supabase functions deploy create-payment-intent --no-verify-jwt
+supabase functions deploy stripe-webhook --no-verify-jwt
 supabase functions deploy confirm-tip --no-verify-jwt
 supabase functions deploy send-invite-email --no-verify-jwt
 supabase functions deploy accept-invitation --no-verify-jwt
@@ -198,7 +181,7 @@ supabase functions deploy auto-payout --no-verify-jwt
 
 2. Trigger a new Netlify deploy (push a commit or manually trigger)
 
-3. Existing test Stripe Connect accounts (venue owners and employees) will NOT work with live keys. All users must re-onboard with real details.
+3. Existing test Stripe Custom accounts (employees) will NOT work with live keys. Employees must have new accounts created.
 
 ---
 
@@ -211,7 +194,7 @@ Stripe test and live modes have **separate** webhook endpoints. You need a live 
 | Setting | Value |
 |---------|-------|
 | Endpoint URL | `https://ghxwritgesdhtoupwvwm.supabase.co/functions/v1/stripe-webhook` |
-| Events | `account.updated`, `payment_intent.succeeded` |
+| Events | `payment_intent.succeeded` |
 | API Version | Match your code: `2024-12-18.acacia` |
 
 The signing secret from the live webhook must be set as `STRIPE_WEBHOOK_SECRET` in Supabase secrets.
@@ -234,7 +217,7 @@ For production, restrict this to your domain:
 "Access-Control-Allow-Origin": "https://your-production-domain.com"
 ```
 
-**Files to update** (all 8 functions that have CORS headers):
+**Files to update** (all functions that have CORS headers):
 - `create-stripe-account/index.ts`
 - `create-payment-intent/index.ts`
 - `confirm-tip/index.ts`
@@ -255,18 +238,10 @@ For production, restrict this to your domain:
 ```
 1. Sign up at /login
 2. Create venue at /onboarding (name, address, description)
-3. Dashboard appears → click "Connect Stripe"
-4. Redirected to Stripe Express onboarding
-5. Enter real business details (ABN, bank account, identity)
-6. Redirected back to /dashboard/stripe-return
-7. Stripe webhook fires account.updated → marks onboarding complete
-8. Dashboard shows "Connected" status
+3. Dashboard appears — tips work immediately (no Stripe connection needed)
+4. Add employees, create QR codes
+5. Configure payout schedule
 ```
-
-**Production notes**:
-- Stripe will require real identity verification (photo ID, etc.)
-- Onboarding may take 1-2 business days for verification
-- The `check_status` action in `create-stripe-account` polls Stripe directly as a fallback
 
 ### Journey 2: Employee Setup
 
@@ -295,15 +270,14 @@ For production, restrict this to your domain:
 5. Pays with card / Apple Pay / Google Pay
 6. Stripe PaymentIntent created:
    - Amount: tip in AUD cents
-   - 5% application_fee_amount → TipUs platform
-   - 95% transfer_data.destination → venue's Stripe Connect account
+   - 100% stays on TipUs platform (no transfer_data)
 7. Payment succeeds → webhook fires → tip recorded in DB
 8. Customer sees "Thank you" confirmation
 ```
 
 **Production notes**:
 - Minimum tip: $1.00 AUD (100 cents)
-- Stripe processing fees (~1.75% + $0.30 for AU domestic cards) are absorbed by the platform fee
+- Stripe processing fees (~1.75% + $0.30 for AU domestic cards) are absorbed by the platform
 - Apple Pay / Google Pay require domain verification in Stripe Dashboard
 - All amounts are in AUD
 
@@ -314,22 +288,20 @@ For production, restrict this to your domain:
 2. Selects payout period (start date → end date)
 3. System calculates:
    - Total tips in period
-   - 5% platform fee (already taken at payment time)
+   - 5% platform fee
    - Net amount split among employees (prorated by days active)
 4. Creates payout record (status: pending)
 5. Venue owner reviews and clicks "Execute Payout"
 6. System:
-   a. Reverses auto-transfers from venue's Stripe account → platform
-   b. Verifies platform has sufficient available balance
-   c. Creates Stripe Custom accounts for employees (if first payout)
-   d. Transfers each employee's share to their Custom account
-   e. Stripe automatically pays out from Custom account → employee bank
+   a. Verifies platform has sufficient available balance
+   b. Creates Stripe Custom accounts for employees (if first payout)
+   c. Transfers each employee's share to their Custom account
+   d. Stripe automatically pays out from Custom account → employee bank
 7. Payout marked as completed
 ```
 
 **Production notes**:
-- Transfer reversals: in production, `pi.transfer` should be populated on PaymentIntents. The code now also checks `latest_charge.transfer` as a fallback.
-- Balance: platform needs sufficient available balance for transfers. Stripe processing fees and transfer timing can affect this. Ensure tips have settled (2-3 business days) before creating payouts.
+- Balance: platform needs sufficient available balance for transfers. Stripe processing fees and settlement timing can affect this. Ensure tips have settled (2-3 business days) before creating payouts.
 - Employee bank payouts: Stripe pays out to employee banks on a 2-business-day rolling schedule by default.
 
 ### Journey 5: Auto-Payouts
@@ -409,7 +381,6 @@ Both `create-payment-intent` and `stripe-webhook` increment `scan_count` on QR c
 
 Monitor these in the Stripe Dashboard:
 - **Payments**: Successful vs failed tip payments
-- **Connect**: Connected account statuses (venue owners)
 - **Transfers**: Platform-to-employee transfers
 - **Webhooks**: Delivery success rate and failures
 - **Disputes**: Watch for chargebacks on tips

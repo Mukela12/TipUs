@@ -27,12 +27,13 @@ TipUs is a digital tipping platform that allows customers to tip hospitality ven
 ### For Venue Owners
 
 1. **Sign up** and create a venue (name, address, description)
-2. **Connect Stripe** — onboard via Stripe Connect Express to accept payments
-3. **Add employees** — invite staff by email; they receive a setup link
-4. **Create QR codes** — generate venue-wide or employee-specific QR codes
-5. **Place QR codes** — print and place at tables, bars, or counters
-6. **View dashboard** — see tips coming in, manage employees, configure payouts
-7. **Run payouts** — manually or on a recurring schedule (weekly/fortnightly/monthly)
+2. **Add employees** — invite staff by email; they receive a setup link
+3. **Create QR codes** — generate venue-wide or employee-specific QR codes
+4. **Place QR codes** — print and place at tables, bars, or counters
+5. **View dashboard** — see tips coming in, manage employees, configure payouts
+6. **Run payouts** — manually or on a recurring schedule (weekly/fortnightly/monthly)
+
+> Note: Venues do not need to connect Stripe. Tips are collected directly by the TipUs platform and distributed to employees at payout time.
 
 ### For Employees
 
@@ -55,21 +56,19 @@ TipUs is a digital tipping platform that allows customers to tip hospitality ven
 
 This is the core of the system. Understanding how money moves is critical for both frontend and backend developers.
 
+### Platform-Direct Model
+
+TipUs uses a **platform-direct** model: all tip money stays on the TipUs platform Stripe account. Venues never touch money or Stripe. This eliminates venue onboarding friction and accounting complexity.
+
 ### Step 1: Customer Pays a Tip
 
 ```
-Customer → Stripe PaymentIntent → Platform (TipUs) account
-                                      │
-                                      ├─ 5% platform fee → stays on platform
-                                      └─ 95% auto-transferred → venue's Stripe Connect account
+Customer → Stripe PaymentIntent → 100% stays on TipUs platform account
 ```
 
 When a customer pays, the `create-payment-intent` Edge Function creates a Stripe PaymentIntent with:
 - `amount`: the tip in cents (e.g., 1000 = $10.00 AUD)
-- `application_fee_amount`: 5% of the tip (stays with TipUs as revenue)
-- `transfer_data.destination`: the venue owner's Stripe Connect account ID
-
-Stripe automatically splits the payment: 5% goes to TipUs, 95% goes to the venue's connected account.
+- No `transfer_data` or `application_fee_amount` — money stays on the platform
 
 ### Step 2: Tip is Recorded in the Database
 
@@ -96,8 +95,8 @@ When the venue owner triggers a payout (manually or via auto-schedule), the `pro
 ### Step 4: Payout Execution
 
 When the venue owner confirms the payout, the `complete-payout` Edge Function:
-1. **Reverses the auto-transfers** — pulls money back from the venue's Stripe Connect account to the platform
-2. **Checks platform balance** — ensures enough funds are available
+1. **Checks platform balance** — ensures enough funds are available (money is already on the platform)
+2. **Keeps 5%** — platform fee is deducted during payout calculation
 3. For each employee:
    - Creates a Stripe Custom connected account (if first payout) with the employee's bank details
    - Transfers the employee's share from the platform to their connected account
@@ -105,17 +104,21 @@ When the venue owner confirms the payout, the `complete-payout` Edge Function:
 4. Updates payout status to `completed`
 
 ```
-Venue's Stripe Account ──(reverse transfer)──→ Platform (TipUs)
-                                                    │
-                                          ┌─────────┼─────────┐
-                                          ▼         ▼         ▼
-                                    Employee A  Employee B  Employee C
-                                    (Custom     (Custom     (Custom
-                                     account)    account)    account)
-                                          │         │         │
-                                          ▼         ▼         ▼
-                                    Bank Acct   Bank Acct   Bank Acct
-                                    (BSB/Acct)  (BSB/Acct)  (BSB/Acct)
+TipUs Platform (100% of tips already here)
+        │
+        ├─ 5% kept as platform fee
+        │
+        └─ 95% split among employees
+             │
+   ┌─────────┼─────────┐
+   ▼         ▼         ▼
+Employee A  Employee B  Employee C
+(Custom     (Custom     (Custom
+ account)    account)    account)
+   │         │         │
+   ▼         ▼         ▼
+Bank Acct   Bank Acct   Bank Acct
+(BSB/Acct)  (BSB/Acct)  (BSB/Acct)
 ```
 
 ### Step 5: Recurring Automatic Payouts
@@ -130,15 +133,14 @@ Venue owners can configure automatic payouts:
 
 ```
 $10.00 tip from customer
-  ├─ $0.50 (5%) → TipUs platform fee
-  ├─ $0.30-0.60 (approx) → Stripe processing fees (paid by platform)
-  └─ $9.50 (95%) → auto-transferred to venue's Stripe Connect account
+  ├─ $0.30-0.60 (approx) → Stripe processing fees (deducted by Stripe)
+  └─ $9.40-9.70 → stays on TipUs platform
                         │
                     At payout time:
                         │
-                    $9.50 reversed back to platform
+                    5% kept as platform fee (~$0.50)
                         │
-                    $9.50 split among employees (prorated by days active)
+                    ~$9.50 split among employees (prorated by days active)
                         │
                     Transferred to each employee's Stripe Custom account
                         │
@@ -213,17 +215,16 @@ All amounts are in **Australian Dollars (AUD)**. Minimum tip: $1.00.
                ▼                              ▼
 ┌──────────────────────┐        ┌──────────────────────┐
 │  Stripe              │        │  Resend              │
-│                      │        │                      │
-│  Connect Express     │        │  Transactional email │
-│  (venue accounts)    │        │  (invitations)       │
-│                      │        │                      │
-│  Custom accounts     │        │  From:               │
-│  (employee payouts)  │        │  contact@fluxium.dev │
-│                      │        │                      │
-│  Payment Intents     │        └──────────────────────┘
+│  (Platform-Direct)   │        │                      │
+│                      │        │  Transactional email │
+│  Payment Intents     │        │  (invitations)       │
+│  (100% on platform)  │        │                      │
+│                      │        │  From:               │
+│  Custom accounts     │        │  contact@fluxium.dev │
+│  (employee payouts)  │        │                      │
+│                      │        └──────────────────────┘
 │  Webhooks            │
 │  Transfers           │
-│  Payouts             │
 └──────────────────────┘
 ```
 
@@ -248,7 +249,7 @@ All amounts are in **Australian Dollars (AUD)**. Minimum tip: $1.00.
 | State Management | Zustand | 5 |
 | Routing | React Router | 7 |
 | Backend | Supabase (PostgreSQL, Auth, Edge Functions) | — |
-| Payments | Stripe (Connect Express + Custom) | — |
+| Payments | Stripe (Platform-Direct + Custom accounts for employees) | — |
 | Email | Resend | — |
 | Icons | Lucide React | — |
 | QR Codes | qrcode.react | 4 |
@@ -284,7 +285,7 @@ tipus/
 │   │   └── animations.ts         # Framer Motion variants (fadeInUp, etc.)
 │   ├── stores/
 │   │   ├── authStore.ts          # Auth state, login/signup/logout, session
-│   │   ├── venueStore.ts         # Venue CRUD, Stripe onboarding, payout schedule
+│   │   ├── venueStore.ts         # Venue CRUD, payout schedule
 │   │   ├── employeeStore.ts      # Employee CRUD, invitations
 │   │   ├── tipStore.ts           # Tips listing, stats, filters
 │   │   ├── payoutStore.ts        # Payout creation, execution, listing
@@ -320,8 +321,7 @@ tipus/
 │       │   ├── TipsPage.tsx                 # Tip history + filters
 │       │   ├── PayoutsPage.tsx              # Payout management + schedule
 │       │   ├── QRCodesPage.tsx              # QR code management
-│       │   ├── SettingsPage.tsx             # Venue settings
-│       │   └── StripeReturnPage.tsx         # Stripe onboarding return
+│       │   └── SettingsPage.tsx             # Venue settings
 │       └── employee/                        # Employee pages
 │           ├── EmployeeDashboardPage.tsx     # Employee stats + recent tips
 │           ├── EmployeeTipsPage.tsx          # All venue tips
@@ -330,14 +330,14 @@ tipus/
 ├── supabase/
 │   ├── config.toml                          # Supabase project config
 │   ├── functions/
-│   │   ├── create-stripe-account/index.ts   # Stripe Connect onboarding
-│   │   ├── stripe-webhook/index.ts          # Webhook: account.updated + payment_intent.succeeded
-│   │   ├── create-payment-intent/index.ts   # Create PaymentIntent with 5% fee
+│   │   ├── create-stripe-account/index.ts   # DEPRECATED (returns 410 Gone)
+│   │   ├── stripe-webhook/index.ts          # Webhook: payment_intent.succeeded
+│   │   ├── create-payment-intent/index.ts   # Create PaymentIntent (100% on platform)
 │   │   ├── confirm-tip/index.ts             # Confirm tip (backup to webhook)
 │   │   ├── send-invite-email/index.ts       # Send employee invite via Resend
 │   │   ├── accept-invitation/index.ts       # Accept invite, link user, save bank
 │   │   ├── process-payout/index.ts          # Calculate payout splits
-│   │   ├── complete-payout/index.ts         # Execute Stripe transfers to employees
+│   │   ├── complete-payout/index.ts         # Check balance + transfer to employees
 │   │   └── auto-payout/index.ts             # Cron: auto-process due venues
 │   └── migrations/                          # SQL migration files
 │       ├── 20260212000000_initial_schema.sql
@@ -353,10 +353,9 @@ tipus/
 ### 7 Tables
 
 #### `venues`
-The central entity. Each venue has one owner and connects to Stripe.
+The central entity. Each venue has one owner. Tips are managed by the TipUs platform.
 ```
 id, owner_id, name, slug, description, address, logo_url,
-stripe_account_id, stripe_onboarding_complete,
 subscription_tier (free|business), subscription_status,
 is_active, auto_payout_enabled, payout_frequency (weekly|fortnightly|monthly),
 payout_day, last_auto_payout_at, created_at, updated_at
@@ -426,14 +425,14 @@ All Edge Functions are Deno-based, deployed with `--no-verify-jwt`, and handle a
 
 | Function | Trigger | What It Does |
 |----------|---------|-------------|
-| `create-stripe-account` | Venue owner clicks "Connect Stripe" | Creates Stripe Connect Express account, returns onboarding URL |
-| `stripe-webhook` | Stripe sends webhook events | Handles `account.updated` (marks onboarding complete) and `payment_intent.succeeded` (records tip in DB) |
-| `create-payment-intent` | Customer submits tip amount | Creates Stripe PaymentIntent with 5% fee and auto-transfer to venue |
+| `create-stripe-account` | **DEPRECATED** | Returns 410 Gone — venue Stripe Connect is no longer required |
+| `stripe-webhook` | Stripe sends webhook events | Handles `payment_intent.succeeded` (records tip in DB) |
+| `create-payment-intent` | Customer submits tip amount | Creates Stripe PaymentIntent (100% stays on platform) |
 | `confirm-tip` | Frontend after payment succeeds | Confirms tip status (backup — webhook is source of truth) |
 | `send-invite-email` | Venue owner adds employee | Sends invite email via Resend with setup link |
 | `accept-invitation` | Employee clicks setup link | Validates token, links auth user to employee record, saves bank details |
 | `process-payout` | Venue owner creates payout | Calculates tip totals, splits among employees (prorated), creates payout + distribution records |
-| `complete-payout` | Venue owner confirms payout | Reverses auto-transfers, creates Stripe Custom accounts for employees, transfers funds |
+| `complete-payout` | Venue owner confirms payout | Checks platform balance, creates Stripe Custom accounts for employees, transfers funds |
 | `auto-payout` | pg_cron daily at 2am UTC | Finds venues due for payout, runs process + complete pipeline automatically |
 
 ---
@@ -451,7 +450,7 @@ State management uses Zustand. Each store follows the same pattern:
 | Store | Responsibility |
 |-------|---------------|
 | `authStore` | Login, signup, logout, session management, user role/metadata |
-| `venueStore` | Venue CRUD, Stripe onboarding status, payout schedule config |
+| `venueStore` | Venue CRUD, payout schedule config |
 | `employeeStore` | Employee CRUD, send invitations, activation/deactivation |
 | `tipStore` | Fetch tips with filters, compute stats (total, average, count) |
 | `payoutStore` | Create payouts, execute payouts, fetch payout history |
@@ -498,7 +497,6 @@ Login → ProtectedRoute checks user.role
 | `/dashboard/payouts` | Venue Owner | Payout management |
 | `/dashboard/qr-codes` | Venue Owner | QR code management |
 | `/dashboard/settings` | Venue Owner | Venue settings |
-| `/dashboard/stripe-return` | Venue Owner | Stripe onboarding callback |
 | `/employee` | Employee | Employee dashboard (stats) |
 | `/employee/tips` | Employee | Venue tip history |
 | `/employee/payouts` | Employee | Payout distribution history |
@@ -623,7 +621,7 @@ Ensure the hosting provider:
 
 Configure in the [Stripe Dashboard](https://dashboard.stripe.com/webhooks):
 - **Endpoint URL**: `https://your-project.supabase.co/functions/v1/stripe-webhook`
-- **Events**: `account.updated`, `payment_intent.succeeded`
+- **Events**: `payment_intent.succeeded`
 - **Update** the `STRIPE_WEBHOOK_SECRET` in Supabase secrets to match the signing secret
 
 ### Auto-Payouts (pg_cron)

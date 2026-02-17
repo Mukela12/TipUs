@@ -14,7 +14,6 @@ interface VenueState {
     description?: string
   ) => Promise<{ error: string | null }>
 
-  connectStripe: () => Promise<{ error: string | null }>
   updateVenue: (data: { name?: string; address?: string | null; description?: string | null }) => Promise<{ error: string | null }>
   updatePayoutSchedule: (venueId: string, schedule: {
     auto_payout_enabled: boolean
@@ -81,41 +80,6 @@ export const useVenueStore = create<VenueState>((set, get) => ({
       return { error: null }
     } catch (err) {
       set({ loading: false })
-      return { error: err instanceof Error ? err.message : 'Unknown error' }
-    }
-  },
-
-  connectStripe: async () => {
-    const venue = get().venue
-    if (!venue) return { error: 'No venue found' }
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return { error: 'Not authenticated' }
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-      const res = await fetch(`${supabaseUrl}/functions/v1/create-stripe-account`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': anonKey,
-        },
-        body: JSON.stringify({ venue_id: venue.id }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) return { error: data.error || `Request failed (${res.status})` }
-
-      // Redirect to Stripe onboarding
-      if (data?.url) {
-        window.location.href = data.url
-      }
-
-      return { error: null }
-    } catch (err) {
       return { error: err instanceof Error ? err.message : 'Unknown error' }
     }
   },
