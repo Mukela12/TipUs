@@ -35,12 +35,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       // Listen for auth state changes
-      supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+          set({ user: null, session: null })
+          return
+        }
         if (session?.user) {
           const authUser = mapSessionToUser(session)
           set({ user: authUser, session })
-        } else {
-          set({ user: null, session: null })
         }
       })
     } catch {
@@ -77,8 +79,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
-    await supabase.auth.signOut()
     set({ user: null, session: null })
+    await supabase.auth.signOut()
   },
 
   setUser: (user) => set({ user }),
