@@ -7,7 +7,7 @@ const navItems = [
   { label: 'Home', href: '/dashboard', icon: LayoutDashboard, end: true },
   { label: 'Team', href: '/dashboard/employees', icon: Users },
   { label: 'Tips', href: '/dashboard/tips', icon: DollarSign },
-  { label: 'Pay', href: '/dashboard/payouts', icon: Wallet },
+  { label: 'Payouts', href: '/dashboard/payouts', icon: Wallet },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 

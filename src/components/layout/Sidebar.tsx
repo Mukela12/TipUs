@@ -4,7 +4,6 @@ import {
   Users,
   DollarSign,
   Wallet,
-  QrCode,
   Settings,
   LogOut,
 } from 'lucide-react'
@@ -14,12 +13,11 @@ import { useVenueStore } from '@/stores/venueStore'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Employees', href: '/dashboard/employees', icon: Users },
-  { label: 'Tips', href: '/dashboard/tips', icon: DollarSign },
-  { label: 'QR Codes', href: '/dashboard/qr-codes', icon: QrCode },
-  { label: 'Payouts', href: '/dashboard/payouts', icon: Wallet },
-  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, tutorialId: undefined },
+  { label: 'Employees', href: '/dashboard/employees', icon: Users, tutorialId: 'nav-employees' },
+  { label: 'Tips', href: '/dashboard/tips', icon: DollarSign, tutorialId: 'nav-tips' },
+  { label: 'Payouts', href: '/dashboard/payouts', icon: Wallet, tutorialId: 'nav-payouts' },
+  { label: 'Settings', href: '/dashboard/settings', icon: Settings, tutorialId: 'nav-settings' },
 ]
 
 export function Sidebar() {
@@ -67,6 +65,7 @@ export function Sidebar() {
             key={item.href}
             to={item.href}
             end={item.href === '/dashboard'}
+            data-tutorial={item.tutorialId}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-200',

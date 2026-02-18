@@ -5,7 +5,7 @@ import {
   Users,
   TrendingUp,
   Wallet,
-  QrCode,
+  Settings,
   ArrowRight,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -160,7 +160,7 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-surface-500">
             Set up your venue in a few quick steps.
           </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <Link
               to="/dashboard/employees"
               className="flex items-center gap-3 rounded-xl border border-surface-200 p-4 hover:bg-surface-50 transition-colors"
@@ -174,27 +174,15 @@ export default function DashboardPage() {
               </div>
             </Link>
             <Link
-              to="/dashboard/qr-codes"
-              className="flex items-center gap-3 rounded-xl border border-surface-200 p-4 hover:bg-surface-50 transition-colors"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100 shrink-0">
-                <QrCode className="h-4 w-4 text-primary-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-surface-900">Create QR codes</p>
-                <p className="text-xs text-surface-500">Start collecting tips</p>
-              </div>
-            </Link>
-            <Link
               to="/dashboard/settings"
               className="flex items-center gap-3 rounded-xl border border-surface-200 p-4 hover:bg-surface-50 transition-colors"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-info-light shrink-0">
-                <DollarSign className="h-4 w-4 text-info" />
+                <Settings className="h-4 w-4 text-info" />
               </div>
               <div>
                 <p className="text-sm font-medium text-surface-900">Venue settings</p>
-                <p className="text-xs text-surface-500">Configure your venue</p>
+                <p className="text-xs text-surface-500">Configure payouts & profile</p>
               </div>
             </Link>
           </div>

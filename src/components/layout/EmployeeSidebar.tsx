@@ -12,10 +12,10 @@ import { useEmployeeDashboardStore } from '@/stores/employeeDashboardStore'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 
 const navItems = [
-  { label: 'Dashboard', href: '/employee', icon: LayoutDashboard },
-  { label: 'My Tips', href: '/employee/tips', icon: DollarSign },
-  { label: 'Payouts', href: '/employee/payouts', icon: Wallet },
-  { label: 'Profile', href: '/employee/profile', icon: User },
+  { label: 'Dashboard', href: '/employee', icon: LayoutDashboard, tutorialId: undefined },
+  { label: 'My Tips', href: '/employee/tips', icon: DollarSign, tutorialId: 'nav-tips' },
+  { label: 'Payouts', href: '/employee/payouts', icon: Wallet, tutorialId: 'nav-payouts' },
+  { label: 'Profile', href: '/employee/profile', icon: User, tutorialId: 'nav-profile' },
 ]
 
 export function EmployeeSidebar() {
@@ -64,6 +64,7 @@ export function EmployeeSidebar() {
             key={item.href}
             to={item.href}
             end={item.href === '/employee'}
+            data-tutorial={item.tutorialId}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-200',

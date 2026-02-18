@@ -1,19 +1,15 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Wallet,
   Loader2,
   ChevronDown,
   ChevronUp,
-  Clock,
-  Calendar,
-  Save,
 } from 'lucide-react'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { usePayoutStore } from '@/stores/payoutStore'
 import { useVenueStore } from '@/stores/venueStore'
-import { useUIStore } from '@/stores/uiStore'
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-warning-light text-warning-dark border border-warning/20',
@@ -31,105 +27,15 @@ const statusLabels: Record<string, string> = {
   failed: 'Failed',
 }
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-function getNextPayoutDate(
-  frequency: 'weekly' | 'fortnightly' | 'monthly',
-  payoutDay: number,
-  lastRun: string | null
-): string {
-  const now = new Date()
-
-  if (frequency === 'monthly') {
-    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), payoutDay))
-    if (next <= now) {
-      next.setUTCMonth(next.getUTCMonth() + 1)
-    }
-    return next.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
-  }
-
-  // Weekly or fortnightly
-  const currentDay = now.getUTCDay()
-  let daysUntil = payoutDay - currentDay
-  if (daysUntil <= 0) daysUntil += 7
-
-  if (frequency === 'fortnightly' && lastRun) {
-    const last = new Date(lastRun)
-    const daysSinceLast = Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24))
-    if (daysSinceLast < 14 && daysUntil < 14 - daysSinceLast) {
-      daysUntil += 7
-    }
-  }
-
-  const next = new Date(now)
-  next.setUTCDate(next.getUTCDate() + daysUntil)
-  return next.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-}
-
 export default function PayoutsPage() {
   const venue = useVenueStore((s) => s.venue)
-  const updatePayoutSchedule = useVenueStore((s) => s.updatePayoutSchedule)
   const { payouts, loading, initialized, fetchPayouts } = usePayoutStore()
-  const addToast = useUIStore((s) => s.addToast)
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
-
-  // Schedule state
-  const [scheduleEnabled, setScheduleEnabled] = useState(false)
-  const [scheduleFrequency, setScheduleFrequency] = useState<'weekly' | 'fortnightly' | 'monthly'>('weekly')
-  const [scheduleDay, setScheduleDay] = useState(1)
-  const [savingSchedule, setSavingSchedule] = useState(false)
-  const [scheduleChanged, setScheduleChanged] = useState(false)
-
-  // Initialize schedule state from venue
-  useEffect(() => {
-    if (venue) {
-      setScheduleEnabled(venue.auto_payout_enabled ?? false)
-      setScheduleFrequency(venue.payout_frequency ?? 'weekly')
-      setScheduleDay(venue.payout_day ?? 1)
-      setScheduleChanged(false)
-    }
-  }, [venue])
 
   useEffect(() => {
     if (venue?.id) fetchPayouts(venue.id)
   }, [venue?.id, fetchPayouts])
-
-  // Track if schedule has been modified
-  useEffect(() => {
-    if (!venue) return
-    const changed =
-      scheduleEnabled !== (venue.auto_payout_enabled ?? false) ||
-      scheduleFrequency !== (venue.payout_frequency ?? 'weekly') ||
-      scheduleDay !== (venue.payout_day ?? 1)
-    setScheduleChanged(changed)
-  }, [venue, scheduleEnabled, scheduleFrequency, scheduleDay])
-
-  const nextPayoutDate = useMemo(() => {
-    if (!scheduleEnabled) return null
-    return getNextPayoutDate(scheduleFrequency, scheduleDay, venue?.last_auto_payout_at ?? null)
-  }, [scheduleEnabled, scheduleFrequency, scheduleDay, venue?.last_auto_payout_at])
-
-  async function handleSaveSchedule() {
-    if (!venue?.id) return
-    setSavingSchedule(true)
-    const { error } = await updatePayoutSchedule(venue.id, {
-      auto_payout_enabled: scheduleEnabled,
-      payout_frequency: scheduleFrequency,
-      payout_day: scheduleDay,
-    })
-    setSavingSchedule(false)
-
-    if (error) {
-      addToast({ type: 'error', title: 'Failed to save schedule', description: error })
-    } else {
-      addToast({ type: 'success', title: 'Payout schedule saved' })
-      setScheduleChanged(false)
-    }
-  }
-
-  const inputClass =
-    'block w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-sm text-surface-900 shadow-sm transition-all placeholder:text-surface-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none'
 
   if (!initialized || loading) {
     return (
@@ -149,137 +55,10 @@ export default function PayoutsPage() {
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
         <div>
-          <h1 className="text-xl font-bold text-surface-900 sm:text-2xl">Payouts</h1>
+          <h1 className="text-xl font-bold text-surface-900 sm:text-2xl">Payout History</h1>
           <p className="mt-0.5 text-sm text-surface-500">
-            View your payout history and configure payout frequency.
+            View payout history and track employee distributions.
           </p>
-        </div>
-      </motion.div>
-
-      {/* Payout Schedule */}
-      <motion.div
-        variants={fadeInUp}
-        initial="hidden"
-        animate="visible"
-        className="mt-5 glass-effect rounded-xl p-5"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-100">
-            <Clock className="h-4.5 w-4.5 text-primary-700" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-surface-900">Payout Schedule</h3>
-            <p className="text-xs text-surface-500">Configure automatic recurring payouts</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {/* Enable toggle */}
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm font-medium text-surface-700">Enable automatic payouts</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={scheduleEnabled}
-              onClick={() => setScheduleEnabled(!scheduleEnabled)}
-              className={cn(
-                'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500/20',
-                scheduleEnabled ? 'bg-primary-500' : 'bg-surface-200'
-              )}
-            >
-              <span
-                className={cn(
-                  'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out',
-                  scheduleEnabled ? 'translate-x-5' : 'translate-x-0'
-                )}
-              />
-            </button>
-          </label>
-
-          {scheduleEnabled && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4"
-            >
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Frequency */}
-                <div>
-                  <label className="block text-xs font-medium text-surface-600 mb-1.5">
-                    Frequency
-                  </label>
-                  <select
-                    value={scheduleFrequency}
-                    onChange={(e) => {
-                      const val = e.target.value as 'weekly' | 'fortnightly' | 'monthly'
-                      setScheduleFrequency(val)
-                      if (val === 'monthly') setScheduleDay(1)
-                      else setScheduleDay(1) // Monday
-                    }}
-                    className={inputClass}
-                  >
-                    <option value="weekly">Weekly</option>
-                    <option value="fortnightly">Fortnightly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </div>
-
-                {/* Day picker */}
-                <div>
-                  <label className="block text-xs font-medium text-surface-600 mb-1.5">
-                    {scheduleFrequency === 'monthly' ? 'Day of Month' : 'Day of Week'}
-                  </label>
-                  <select
-                    value={scheduleDay}
-                    onChange={(e) => setScheduleDay(Number(e.target.value))}
-                    className={inputClass}
-                  >
-                    {scheduleFrequency === 'monthly'
-                      ? Array.from({ length: 28 }, (_, i) => (
-                          <option key={i + 1} value={i + 1}>
-                            {i + 1}{i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'}
-                          </option>
-                        ))
-                      : DAY_NAMES.map((name, i) => (
-                          <option key={i} value={i}>
-                            {name}
-                          </option>
-                        ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Next payout info */}
-              {nextPayoutDate && (
-                <div className="flex items-center gap-2 rounded-lg bg-primary-50 px-3 py-2 border border-primary-100">
-                  <Calendar className="h-4 w-4 text-primary-600" />
-                  <span className="text-xs text-primary-700">
-                    Next scheduled payout: <span className="font-semibold">{nextPayoutDate}</span>
-                  </span>
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* Save button */}
-          {scheduleChanged && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex justify-end"
-            >
-              <button
-                onClick={handleSaveSchedule}
-                disabled={savingSchedule}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {savingSchedule ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save Schedule
-              </button>
-            </motion.div>
-          )}
         </div>
       </motion.div>
 

@@ -9,7 +9,6 @@ import DashboardPage from '@/pages/dashboard/DashboardPage'
 import EmployeesPage from '@/pages/dashboard/EmployeesPage'
 import TipsPage from '@/pages/dashboard/TipsPage'
 import PayoutsPage from '@/pages/dashboard/PayoutsPage'
-import QRCodesPage from '@/pages/dashboard/QRCodesPage'
 import SettingsPage from '@/pages/dashboard/SettingsPage'
 import OnboardingPage from '@/pages/onboarding/OnboardingPage'
 import TipPage from '@/pages/tip/TipPage'
@@ -68,7 +67,6 @@ export default function App() {
             <Route path="/dashboard/employees" element={<EmployeesPage />} />
             <Route path="/dashboard/tips" element={<TipsPage />} />
             <Route path="/dashboard/payouts" element={<PayoutsPage />} />
-            <Route path="/dashboard/qr-codes" element={<QRCodesPage />} />
             <Route path="/dashboard/settings" element={<SettingsPage />} />
             <Route path="/dashboard/notifications" element={<NotificationsPage />} />
           </Route>

@@ -5,6 +5,7 @@ import {
   User,
   Loader2,
   Save,
+  CalendarClock,
 } from 'lucide-react'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { useVenueStore } from '@/stores/venueStore'
@@ -14,6 +15,7 @@ import { useUIStore } from '@/stores/uiStore'
 export default function SettingsPage() {
   const venue = useVenueStore((s) => s.venue)
   const updateVenue = useVenueStore((s) => s.updateVenue)
+  const updatePayoutSchedule = useVenueStore((s) => s.updatePayoutSchedule)
   const user = useAuthStore((s) => s.user)
   const addToast = useUIStore((s) => s.addToast)
 
@@ -22,11 +24,17 @@ export default function SettingsPage() {
   const [venueDescription, setVenueDescription] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const [payoutFrequency, setPayoutFrequency] = useState<'weekly' | 'fortnightly' | 'monthly'>('weekly')
+  const [payoutDay, setPayoutDay] = useState(1)
+  const [savingPayout, setSavingPayout] = useState(false)
+
   useEffect(() => {
     if (venue) {
       setVenueName(venue.name)
       setVenueAddress(venue.address ?? '')
       setVenueDescription(venue.description ?? '')
+      setPayoutFrequency(venue.payout_frequency ?? 'weekly')
+      setPayoutDay(venue.payout_day ?? 1)
     }
   }, [venue])
 
@@ -48,6 +56,35 @@ export default function SettingsPage() {
     }
     setSaving(false)
   }
+
+  async function handleSavePayout(e: React.FormEvent) {
+    e.preventDefault()
+    if (!venue?.id) return
+
+    setSavingPayout(true)
+    const { error } = await updatePayoutSchedule(venue.id, {
+      auto_payout_enabled: true,
+      payout_frequency: payoutFrequency,
+      payout_day: payoutDay,
+    })
+
+    if (error) {
+      addToast({ type: 'error', title: 'Failed to save', description: error })
+    } else {
+      addToast({ type: 'success', title: 'Payout schedule updated' })
+    }
+    setSavingPayout(false)
+  }
+
+  const dayOptions = payoutFrequency === 'monthly'
+    ? Array.from({ length: 28 }, (_, i) => ({ value: i + 1, label: `Day ${i + 1}` }))
+    : [
+        { value: 1, label: 'Monday' },
+        { value: 2, label: 'Tuesday' },
+        { value: 3, label: 'Wednesday' },
+        { value: 4, label: 'Thursday' },
+        { value: 5, label: 'Friday' },
+      ]
 
   const inputClass =
     'block w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-sm text-surface-900 shadow-sm transition-all placeholder:text-surface-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none'
@@ -130,6 +167,73 @@ export default function SettingsPage() {
                   <Save className="h-4 w-4" />
                 )}
                 Save Changes
+              </button>
+            </div>
+          </form>
+        </motion.div>
+
+        {/* Payout Schedule */}
+        <motion.div variants={fadeInUp} className="glass-effect rounded-xl">
+          <div className="border-b border-surface-200/50 px-5 py-4 sm:px-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-100">
+                <CalendarClock className="h-4.5 w-4.5 text-accent-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-surface-900">Payout Schedule</h2>
+                <p className="text-xs text-surface-500">Choose how often your team gets paid out.</p>
+              </div>
+            </div>
+          </div>
+          <form onSubmit={handleSavePayout} className="p-5 sm:p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-surface-600 mb-1.5">
+                Frequency
+              </label>
+              <select
+                value={payoutFrequency}
+                onChange={(e) => {
+                  setPayoutFrequency(e.target.value as 'weekly' | 'fortnightly' | 'monthly')
+                  setPayoutDay(1)
+                }}
+                className={inputClass}
+              >
+                <option value="weekly">Weekly</option>
+                <option value="fortnightly">Fortnightly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-surface-600 mb-1.5">
+                {payoutFrequency === 'monthly' ? 'Day of Month' : 'Day of Week'}
+              </label>
+              <select
+                value={payoutDay}
+                onChange={(e) => setPayoutDay(Number(e.target.value))}
+                className={inputClass}
+              >
+                {dayOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-surface-400">
+              TipUs will automatically distribute tips to your employees on the selected schedule.
+            </p>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={savingPayout}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingPayout ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save Schedule
               </button>
             </div>
           </form>
