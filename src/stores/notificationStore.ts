@@ -8,23 +8,20 @@ interface NotificationState {
   unreadCount: number
   loading: boolean
   filter: NotificationType | 'all'
-  dropdownOpen: boolean
 
   fetchNotifications: () => Promise<void>
   fetchUnreadCount: () => Promise<void>
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
   setFilter: (filter: NotificationType | 'all') => void
-  setDropdownOpen: (open: boolean) => void
   subscribeToRealtime: () => () => void
 }
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
+export const useNotificationStore = create<NotificationState>((set) => ({
   notifications: [],
   unreadCount: 0,
   loading: false,
   filter: 'all',
-  dropdownOpen: false,
 
   fetchNotifications: async () => {
     set({ loading: true })
@@ -66,12 +63,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   setFilter: (filter) => set({ filter }),
-  setDropdownOpen: (open) => {
-    set({ dropdownOpen: open })
-    if (open && get().notifications.length === 0) {
-      get().fetchNotifications()
-    }
-  },
 
   subscribeToRealtime: () => {
     const channel = supabase
@@ -101,6 +92,5 @@ onSignOut(() => {
     unreadCount: 0,
     loading: false,
     filter: 'all',
-    dropdownOpen: false,
   })
 })

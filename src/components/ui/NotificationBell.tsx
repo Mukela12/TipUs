@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -39,20 +40,28 @@ interface NotificationBellProps {
 
 export function NotificationBell({ basePath }: NotificationBellProps) {
   const navigate = useNavigate()
-  const wrapperRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; left?: number; right?: number }>({ top: 0, right: 0 })
   const {
     notifications,
     unreadCount,
     filter,
-    dropdownOpen,
-    setDropdownOpen,
     setFilter,
     markAsRead,
     markAllAsRead,
+    fetchNotifications,
   } = useNotificationStore()
+
+  // Fetch notifications on first open
+  const hasFetched = useRef(false)
+  useEffect(() => {
+    if (open && !hasFetched.current) {
+      hasFetched.current = true
+      fetchNotifications()
+    }
+  }, [open, fetchNotifications])
 
   // Compute dropdown position when opened
   const updatePosition = useCallback(() => {
@@ -61,44 +70,40 @@ export function NotificationBell({ basePath }: NotificationBellProps) {
     const dropdownWidth = window.innerWidth >= 640 ? 384 : 320
 
     if (rect.right >= dropdownWidth) {
-      // Enough space to the left — align right edge with button
       setPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
     } else {
-      // Not enough space left — extend to the right
       setPos({ top: rect.bottom + 8, left: rect.left })
     }
   }, [])
 
   useEffect(() => {
-    if (!dropdownOpen) return
+    if (!open) return
     updatePosition()
-  }, [dropdownOpen, updatePosition])
+  }, [open, updatePosition])
 
-  // Close on outside click
+  // Close on outside click — uses the portal'd dropdown ref
   useEffect(() => {
-    if (!dropdownOpen) return
+    if (!open) return
     const handler = (e: MouseEvent) => {
       const target = e.target as Node
-      if (
-        wrapperRef.current && !wrapperRef.current.contains(target) &&
-        dropdownRef.current && !dropdownRef.current.contains(target)
-      ) {
-        setDropdownOpen(false)
-      }
+      // Keep open if click is on the bell button or inside the dropdown
+      if (buttonRef.current?.contains(target)) return
+      if (dropdownRef.current?.contains(target)) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [dropdownOpen, setDropdownOpen])
+  }, [open])
 
   // Close on Escape
   useEffect(() => {
-    if (!dropdownOpen) return
+    if (!open) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDropdownOpen(false)
+      if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [dropdownOpen, setDropdownOpen])
+  }, [open])
 
   const filtered =
     filter === 'all'
@@ -113,26 +118,12 @@ export function NotificationBell({ basePath }: NotificationBellProps) {
 
   function handleNotificationClick(n: Notification) {
     if (!n.is_read) markAsRead(n.id)
-    setDropdownOpen(false)
+    setOpen(false)
   }
 
-  return (
-    <div ref={wrapperRef} className="relative">
-      <button
-        ref={buttonRef}
-        onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="relative rounded-xl p-2 hover:bg-surface-100 transition-colors"
-        aria-label="Notifications"
-      >
-        <Bell className="h-5 w-5 text-surface-500" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {dropdownOpen && (
+  // Render dropdown via portal so it escapes stacking contexts (backdrop-filter, etc.)
+  const dropdown = open
+    ? createPortal(
         <div
           ref={dropdownRef}
           className="fixed w-80 sm:w-96 rounded-xl bg-white border border-surface-200 shadow-lg z-[100] overflow-hidden"
@@ -217,7 +208,7 @@ export function NotificationBell({ basePath }: NotificationBellProps) {
           <div className="border-t border-surface-100 px-4 py-2.5">
             <button
               onClick={() => {
-                setDropdownOpen(false)
+                setOpen(false)
                 navigate(`${basePath}/notifications`)
               }}
               className="w-full text-center text-xs font-medium text-primary-600 hover:text-primary-700"
@@ -225,8 +216,27 @@ export function NotificationBell({ basePath }: NotificationBellProps) {
               View all notifications
             </button>
           </div>
-        </div>
-      )}
-    </div>
+        </div>,
+        document.body
+      )
+    : null
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        onClick={() => setOpen(!open)}
+        className="relative rounded-xl p-2 hover:bg-surface-100 transition-colors"
+        aria-label="Notifications"
+      >
+        <Bell className="h-5 w-5 text-surface-500" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </button>
+      {dropdown}
+    </>
   )
 }
