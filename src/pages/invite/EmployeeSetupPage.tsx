@@ -291,10 +291,10 @@ export default function EmployeeSetupPage() {
               You'll start receiving tips at <strong>{inviteInfo?.venue_name}</strong>.
             </p>
             <button
-              onClick={() => navigate('/employee')}
+              onClick={() => navigate('/login')}
               className="mt-6 rounded-xl bg-primary-500 px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-600 transition-colors"
             >
-              Go to Dashboard
+              Go to Login
             </button>
             <p className="mt-4 text-xs text-surface-400">
               Your manager will share a QR code that customers can scan to tip you directly. You're all good to go!

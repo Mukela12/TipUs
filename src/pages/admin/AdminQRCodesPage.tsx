@@ -333,7 +333,12 @@ export default function AdminQRCodesPage() {
 
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => downloadQRCodeAsPng(`qr-${qr.id}`, qr.label || qr.short_code)}
+                      onClick={() => {
+                        const venue = venues.find((v) => v.id === selectedVenueId)
+                        const venueName = venue?.name ?? 'venue'
+                        const label = qr.label ? `${venueName}-${qr.label}` : venueName
+                        downloadQRCodeAsPng(`qr-${qr.id}`, label.replace(/\s+/g, '-').toLowerCase())
+                      }}
                       className="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-600 transition-colors"
                       title="Download QR code"
                     >

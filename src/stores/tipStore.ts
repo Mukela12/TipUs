@@ -11,6 +11,7 @@ interface TipStats {
   avgTip: number
   tipsThisWeek: number
   tipCount: number
+  totalScans: number
 }
 
 interface TipFilters {
@@ -34,11 +35,12 @@ const emptyStats: TipStats = {
   avgTip: 0,
   tipsThisWeek: 0,
   tipCount: 0,
+  totalScans: 0,
 }
 
-function computeStats(tips: TipWithEmployee[]): TipStats {
+function computeStats(tips: TipWithEmployee[], totalScans: number): TipStats {
   const succeeded = tips.filter((t) => t.status === 'succeeded')
-  if (succeeded.length === 0) return emptyStats
+  if (succeeded.length === 0) return { ...emptyStats, totalScans }
 
   const totalTips = succeeded.reduce((sum, t) => sum + t.amount, 0)
   const tipCount = succeeded.length
@@ -50,7 +52,7 @@ function computeStats(tips: TipWithEmployee[]): TipStats {
     .filter((t) => new Date(t.created_at) >= weekAgo)
     .reduce((sum, t) => sum + t.amount, 0)
 
-  return { totalTips, avgTip, tipsThisWeek, tipCount }
+  return { totalTips, avgTip, tipsThisWeek, tipCount, totalScans }
 }
 
 export const useTipStore = create<TipState>((set) => ({
@@ -78,15 +80,21 @@ export const useTipStore = create<TipState>((set) => ({
         query = query.lte('created_at', `${filters.dateTo}T23:59:59`)
       }
 
-      const { data, error } = await query
+      const [tipsResult, scansResult] = await Promise.all([
+        query,
+        supabase
+          .from('qr_codes')
+          .select('scan_count')
+          .eq('venue_id', venueId),
+      ])
 
-      if (error) {
-        console.error('Failed to fetch tips:', error.message)
+      if (tipsResult.error) {
+        console.error('Failed to fetch tips:', tipsResult.error.message)
         set({ loading: false, initialized: true })
         return
       }
 
-      const tips: TipWithEmployee[] = (data ?? []).map((row: Record<string, unknown>) => {
+      const tips: TipWithEmployee[] = (tipsResult.data ?? []).map((row: Record<string, unknown>) => {
         const employees = row.employees as { name: string } | null
         return {
           id: row.id as string,
@@ -104,7 +112,12 @@ export const useTipStore = create<TipState>((set) => ({
         }
       })
 
-      set({ tips, stats: computeStats(tips), loading: false, initialized: true })
+      const totalScans = (scansResult.data ?? []).reduce(
+        (sum, row) => sum + ((row as { scan_count: number }).scan_count ?? 0),
+        0
+      )
+
+      set({ tips, stats: computeStats(tips, totalScans), loading: false, initialized: true })
     } catch {
       set({ loading: false, initialized: true })
     }

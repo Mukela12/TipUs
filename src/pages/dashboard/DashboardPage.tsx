@@ -4,7 +4,7 @@ import {
   DollarSign,
   Users,
   TrendingUp,
-  Wallet,
+  ScanLine,
   Settings,
   ArrowRight,
 } from 'lucide-react'
@@ -68,11 +68,11 @@ export default function DashboardPage() {
       href: '/dashboard/employees',
     },
     {
-      label: 'Payouts',
-      value: formatCurrency(tipStats.totalTips),
-      icon: Wallet,
+      label: 'QR Scans',
+      value: String(tipStats.totalScans),
+      icon: ScanLine,
       color: 'bg-info-light text-info',
-      href: '/dashboard/payouts',
+      href: '/dashboard/tips',
     },
     {
       label: 'This Week',
