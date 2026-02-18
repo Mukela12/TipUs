@@ -28,6 +28,9 @@ import AdminVenuesPage from '@/pages/admin/AdminVenuesPage'
 import AdminQRCodesPage from '@/pages/admin/AdminQRCodesPage'
 import AdminPayoutsPage from '@/pages/admin/AdminPayoutsPage'
 
+// Shared notification page
+import NotificationsPage from '@/components/notifications/NotificationsPage'
+
 // Layout
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { EmployeeLayout } from '@/components/layout/EmployeeLayout'
@@ -67,6 +70,7 @@ export default function App() {
             <Route path="/dashboard/payouts" element={<PayoutsPage />} />
             <Route path="/dashboard/qr-codes" element={<QRCodesPage />} />
             <Route path="/dashboard/settings" element={<SettingsPage />} />
+            <Route path="/dashboard/notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* Employee dashboard */}
@@ -75,6 +79,7 @@ export default function App() {
             <Route path="/employee/tips" element={<EmployeeTipsPage />} />
             <Route path="/employee/payouts" element={<EmployeePayoutsPage />} />
             <Route path="/employee/profile" element={<EmployeeProfilePage />} />
+            <Route path="/employee/notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* Admin dashboard */}
@@ -83,6 +88,7 @@ export default function App() {
             <Route path="/admin/venues" element={<AdminVenuesPage />} />
             <Route path="/admin/qr-codes" element={<AdminQRCodesPage />} />
             <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
+            <Route path="/admin/notifications" element={<NotificationsPage />} />
           </Route>
         </Route>
 

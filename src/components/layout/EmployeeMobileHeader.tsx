@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useEmployeeDashboardStore } from '@/stores/employeeDashboardStore'
+import { NotificationBell } from '@/components/ui/NotificationBell'
 
 const navItems = [
   { label: 'Dashboard', href: '/employee', icon: LayoutDashboard },
@@ -58,8 +59,7 @@ export function EmployeeMobileHeader() {
           <span className="text-lg font-semibold text-surface-900">TipUs</span>
         </Link>
 
-        {/* Spacer to balance the layout */}
-        <div style={{ width: '44px' }} />
+        <NotificationBell basePath="/employee" />
       </div>
 
       <AnimatePresence>

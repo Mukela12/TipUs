@@ -46,6 +46,38 @@ export function generateSlug(text: string): string {
     .replace(/^-|-$/g, '')
 }
 
+/** Download a QR code SVG element as a PNG file. */
+export function downloadQRCodeAsPng(svgElementId: string, filename: string): void {
+  const svgEl = document.getElementById(svgElementId)
+  if (!svgEl) return
+
+  const serializer = new XMLSerializer()
+  const svgString = serializer.serializeToString(svgEl)
+  const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+  const blobUrl = URL.createObjectURL(blob)
+
+  const img = new Image()
+  img.onload = () => {
+    const size = 512
+    const padding = 32
+    const canvas = document.createElement('canvas')
+    canvas.width = size + padding * 2
+    canvas.height = size + padding * 2
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(img, padding, padding, size, size)
+
+    const a = document.createElement('a')
+    a.download = `${filename}.png`
+    a.href = canvas.toDataURL('image/png')
+    a.click()
+
+    URL.revokeObjectURL(blobUrl)
+  }
+  img.src = blobUrl
+}
+
 /** Generate a random 8-character short code for QR codes. */
 export function generateShortCode(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'

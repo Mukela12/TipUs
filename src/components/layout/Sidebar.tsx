@@ -4,17 +4,20 @@ import {
   Users,
   DollarSign,
   Wallet,
+  QrCode,
   Settings,
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useVenueStore } from '@/stores/venueStore'
+import { NotificationBell } from '@/components/ui/NotificationBell'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Employees', href: '/dashboard/employees', icon: Users },
   { label: 'Tips', href: '/dashboard/tips', icon: DollarSign },
+  { label: 'QR Codes', href: '/dashboard/qr-codes', icon: QrCode },
   { label: 'Payouts', href: '/dashboard/payouts', icon: Wallet },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
@@ -46,12 +49,13 @@ export function Sidebar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 shrink-0">
               {user.full_name?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-surface-900 truncate leading-tight">
                 {user.full_name || 'Venue Owner'}
               </p>
               <p className="text-[11px] text-surface-500 truncate">{user.email}</p>
             </div>
+            <NotificationBell basePath="/dashboard" />
           </div>
         </div>
       )}

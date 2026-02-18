@@ -99,13 +99,16 @@ export default function EmployeeDashboardPage() {
 
         {/* Hero metric — desktop only */}
         {hasTips && (
-          <div className="hidden lg:block shrink-0 text-right">
-            <p className="text-xs font-medium uppercase tracking-wider text-surface-400">
-              Total earned
-            </p>
-            <p className="text-3xl font-bold text-surface-900 tabular-nums mt-0.5">
-              {formatCurrency(tipStats.totalTips)}
-            </p>
+          <div className="hidden lg:flex items-center gap-3 shrink-0 rounded-xl bg-surface-50 border border-surface-200 px-5 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100">
+              <DollarSign className="h-4 w-4 text-primary-600" />
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-surface-500">Venue total</p>
+              <p className="text-xl font-bold text-surface-900 tabular-nums">
+                {formatCurrency(tipStats.totalTips)}
+              </p>
+            </div>
           </div>
         )}
       </motion.div>

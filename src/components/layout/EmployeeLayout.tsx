@@ -6,16 +6,24 @@ import { EmployeeMobileHeader } from './EmployeeMobileHeader'
 import { EmployeeMobileBottomNav } from './EmployeeMobileBottomNav'
 import { useAuthStore } from '@/stores/authStore'
 import { useEmployeeDashboardStore } from '@/stores/employeeDashboardStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 export function EmployeeLayout() {
   const user = useAuthStore((s) => s.user)
   const { loading, initialized, fetchProfile } = useEmployeeDashboardStore()
+  const { fetchUnreadCount, subscribeToRealtime } = useNotificationStore()
 
   useEffect(() => {
     if (user?.employee_id) {
       fetchProfile(user.employee_id)
     }
   }, [user?.employee_id, fetchProfile])
+
+  useEffect(() => {
+    fetchUnreadCount()
+    const unsubscribe = subscribeToRealtime()
+    return unsubscribe
+  }, [fetchUnreadCount, subscribeToRealtime])
 
   if (!user?.employee_id) {
     return <Navigate to="/login" replace />

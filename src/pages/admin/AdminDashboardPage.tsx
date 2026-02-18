@@ -7,11 +7,28 @@ import {
   TrendingUp,
   Wallet,
   ArrowRight,
+  Activity,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { useAdminStore } from '@/stores/adminStore'
+import { useAuthStore } from '@/stores/authStore'
+
+function getTimeGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function getFormattedDate(): string {
+  return new Date().toLocaleDateString('en-AU', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+}
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-warning-light text-warning-dark border border-warning/20',
@@ -23,12 +40,14 @@ const statusStyles: Record<string, string> = {
 
 export default function AdminDashboardPage() {
   const { stats, allPayouts, fetchStats, fetchAllPayouts } = useAdminStore()
+  const user = useAuthStore((s) => s.user)
 
   useEffect(() => {
     fetchStats()
     fetchAllPayouts()
   }, [fetchStats, fetchAllPayouts])
 
+  const firstName = user?.full_name?.split(' ')[0] || 'Admin'
   const recentPayouts = allPayouts.slice(0, 5)
 
   const statCards = [
@@ -76,11 +95,36 @@ export default function AdminDashboardPage() {
         variants={fadeInUp}
         initial="hidden"
         animate="visible"
+        className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
       >
-        <h1 className="text-xl font-bold text-surface-900 sm:text-2xl">Admin Dashboard</h1>
-        <p className="mt-0.5 text-sm text-surface-500">
-          Platform overview and key metrics.
-        </p>
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wider text-surface-400">
+            {getFormattedDate()}
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-surface-900 sm:text-3xl truncate">
+            {getTimeGreeting()}, {firstName}
+          </h1>
+          <p className="mt-1 text-sm text-surface-500">
+            {stats.totalVenues > 0
+              ? `${stats.totalVenues} venue${stats.totalVenues !== 1 ? 's' : ''} active across the platform`
+              : 'Platform overview and management'}
+          </p>
+        </div>
+
+        {/* Platform pulse — desktop only */}
+        {stats.tipsThisWeek > 0 && (
+          <div className="hidden lg:flex items-center gap-3 shrink-0 rounded-xl bg-surface-50 border border-surface-200 px-5 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success-light">
+              <Activity className="h-4 w-4 text-success" />
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-surface-500">This week</p>
+              <p className="text-xl font-bold text-surface-900 tabular-nums">
+                {formatCurrency(stats.tipsThisWeek)}
+              </p>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Stats */}

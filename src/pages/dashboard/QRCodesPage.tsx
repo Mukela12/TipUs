@@ -9,10 +9,11 @@ import {
   Loader2,
   X,
   Eye,
+  Download,
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
-import { cn } from '@/lib/utils'
+import { cn, downloadQRCodeAsPng } from '@/lib/utils'
 import { useQRCodeStore } from '@/stores/qrCodeStore'
 import { useEmployeeStore } from '@/stores/employeeStore'
 import { useVenueStore } from '@/stores/venueStore'
@@ -245,6 +246,7 @@ export default function QRCodesPage() {
                 <div className="flex justify-center mb-4">
                   <div className="rounded-xl bg-white p-3 shadow-soft">
                     <QRCodeSVG
+                      id={`qr-${qr.id}`}
                       value={tipUrl}
                       size={140}
                       level="M"
@@ -277,6 +279,14 @@ export default function QRCodesPage() {
                   </span>
 
                   <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => downloadQRCodeAsPng(`qr-${qr.id}`, qr.label || qr.short_code)}
+                      className="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-600 transition-colors"
+                      title="Download QR code"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+
                     <button
                       onClick={() => handleCopyUrl(qr.short_code, qr.id)}
                       className="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-600 transition-colors"

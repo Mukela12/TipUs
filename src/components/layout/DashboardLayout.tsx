@@ -5,13 +5,21 @@ import { Sidebar } from './Sidebar'
 import { MobileHeader } from './MobileHeader'
 import { MobileBottomNav } from './MobileBottomNav'
 import { useVenueStore } from '@/stores/venueStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 export function DashboardLayout() {
   const { venue, loading, initialized, fetchUserVenue } = useVenueStore()
+  const { fetchUnreadCount, subscribeToRealtime } = useNotificationStore()
 
   useEffect(() => {
     fetchUserVenue()
   }, [fetchUserVenue])
+
+  useEffect(() => {
+    fetchUnreadCount()
+    const unsubscribe = subscribeToRealtime()
+    return unsubscribe
+  }, [fetchUnreadCount, subscribeToRealtime])
 
   if (!initialized || loading) {
     return (

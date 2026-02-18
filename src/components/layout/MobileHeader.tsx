@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Menu, X, LogOut, LayoutDashboard, Users, DollarSign, Wallet, Settings } from 'lucide-react'
+import { Menu, X, LogOut, LayoutDashboard, Users, DollarSign, QrCode, Wallet, Settings } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useVenueStore } from '@/stores/venueStore'
+import { NotificationBell } from '@/components/ui/NotificationBell'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Employees', href: '/dashboard/employees', icon: Users },
   { label: 'Tips', href: '/dashboard/tips', icon: DollarSign },
+  { label: 'QR Codes', href: '/dashboard/qr-codes', icon: QrCode },
   { label: 'Payouts', href: '/dashboard/payouts', icon: Wallet },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
@@ -59,8 +61,7 @@ export function MobileHeader() {
           <span className="text-lg font-semibold text-surface-900">TipUs</span>
         </Link>
 
-        {/* Spacer to balance the layout */}
-        <div style={{ width: '44px' }} />
+        <NotificationBell basePath="/dashboard" />
       </div>
 
       <AnimatePresence>

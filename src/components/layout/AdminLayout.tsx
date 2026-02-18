@@ -1,9 +1,19 @@
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminMobileHeader } from './AdminMobileHeader'
 import { AdminMobileBottomNav } from './AdminMobileBottomNav'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 export function AdminLayout() {
+  const { fetchUnreadCount, subscribeToRealtime } = useNotificationStore()
+
+  useEffect(() => {
+    fetchUnreadCount()
+    const unsubscribe = subscribeToRealtime()
+    return unsubscribe
+  }, [fetchUnreadCount, subscribeToRealtime])
+
   return (
     <div className="h-screen overflow-hidden bg-surface-50">
       {/* Desktop sidebar */}

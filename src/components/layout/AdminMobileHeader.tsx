@@ -4,6 +4,7 @@ import { Menu, X, LogOut, LayoutDashboard, Store, QrCode, Wallet } from 'lucide-
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
+import { NotificationBell } from '@/components/ui/NotificationBell'
 
 const navItems = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -56,7 +57,7 @@ export function AdminMobileHeader() {
           <span className="text-lg font-semibold text-surface-900">TipUs Admin</span>
         </Link>
 
-        <div style={{ width: '44px' }} />
+        <NotificationBell basePath="/admin" />
       </div>
 
       <AnimatePresence>

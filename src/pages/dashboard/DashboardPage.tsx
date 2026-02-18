@@ -5,6 +5,7 @@ import {
   Users,
   TrendingUp,
   Wallet,
+  QrCode,
   ArrowRight,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -103,13 +104,16 @@ export default function DashboardPage() {
 
         {/* Hero metric — desktop only */}
         {hasTips && (
-          <div className="hidden lg:block shrink-0 text-right">
-            <p className="text-xs font-medium uppercase tracking-wider text-surface-400">
-              Total earned
-            </p>
-            <p className="text-3xl font-bold text-surface-900 tabular-nums mt-0.5">
-              {formatCurrency(tipStats.totalTips)}
-            </p>
+          <div className="hidden lg:flex items-center gap-3 shrink-0 rounded-xl bg-surface-50 border border-surface-200 px-5 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100">
+              <DollarSign className="h-4 w-4 text-primary-600" />
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-surface-500">Total earned</p>
+              <p className="text-xl font-bold text-surface-900 tabular-nums">
+                {formatCurrency(tipStats.totalTips)}
+              </p>
+            </div>
           </div>
         )}
       </motion.div>
@@ -170,6 +174,18 @@ export default function DashboardPage() {
               </div>
             </Link>
             <Link
+              to="/dashboard/qr-codes"
+              className="flex items-center gap-3 rounded-xl border border-surface-200 p-4 hover:bg-surface-50 transition-colors"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100 shrink-0">
+                <QrCode className="h-4 w-4 text-primary-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-surface-900">Create QR codes</p>
+                <p className="text-xs text-surface-500">Start collecting tips</p>
+              </div>
+            </Link>
+            <Link
               to="/dashboard/settings"
               className="flex items-center gap-3 rounded-xl border border-surface-200 p-4 hover:bg-surface-50 transition-colors"
             >
@@ -179,18 +195,6 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm font-medium text-surface-900">Venue settings</p>
                 <p className="text-xs text-surface-500">Configure your venue</p>
-              </div>
-            </Link>
-            <Link
-              to="/dashboard/payouts"
-              className="flex items-center gap-3 rounded-xl border border-surface-200 p-4 hover:bg-surface-50 transition-colors"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100 shrink-0">
-                <Wallet className="h-4 w-4 text-primary-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-surface-900">View payouts</p>
-                <p className="text-xs text-surface-500">See your history</p>
               </div>
             </Link>
           </div>

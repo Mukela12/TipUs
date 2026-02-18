@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
+import { NotificationBell } from '@/components/ui/NotificationBell'
 
 const navItems = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -40,12 +41,13 @@ export function AdminSidebar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 shrink-0">
               {user.full_name?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-surface-900 truncate leading-tight">
                 {user.full_name || 'Admin'}
               </p>
               <p className="text-[11px] text-surface-500 truncate">{user.email}</p>
             </div>
+            <NotificationBell basePath="/admin" />
           </div>
         </div>
       )}

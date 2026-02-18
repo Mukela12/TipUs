@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useEmployeeDashboardStore } from '@/stores/employeeDashboardStore'
+import { NotificationBell } from '@/components/ui/NotificationBell'
 
 const navItems = [
   { label: 'Dashboard', href: '/employee', icon: LayoutDashboard },
@@ -45,12 +46,13 @@ export function EmployeeSidebar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 shrink-0">
               {(profile?.name ?? user.full_name ?? user.email).charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-surface-900 truncate leading-tight">
                 {profile?.name ?? user.full_name ?? 'Employee'}
               </p>
               <p className="text-[11px] text-surface-500 truncate">{user.email}</p>
             </div>
+            <NotificationBell basePath="/employee" />
           </div>
         </div>
       )}
