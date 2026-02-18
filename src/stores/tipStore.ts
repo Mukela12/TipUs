@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import { onSignOut } from '@/stores/authStore'
 import type { Tip } from '@/types'
 
 interface TipWithEmployee extends Tip {
@@ -125,3 +126,5 @@ export const useTipStore = create<TipState>((set) => ({
 
   reset: () => set({ tips: [], stats: emptyStats, loading: false, initialized: false }),
 }))
+
+onSignOut(() => useTipStore.getState().reset())

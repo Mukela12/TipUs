@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import { onSignOut } from '@/stores/authStore'
 import type { Employee, Tip, PayoutDistribution, DistributionStatus } from '@/types'
 
 interface TipWithEmployee extends Tip {
@@ -238,3 +239,5 @@ export const useEmployeeDashboardStore = create<EmployeeDashboardState>((set) =>
       initialized: false,
     }),
 }))
+
+onSignOut(() => useEmployeeDashboardStore.getState().reset())

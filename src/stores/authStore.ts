@@ -3,6 +3,12 @@ import { supabase } from '@/lib/supabase'
 import type { AuthUser } from '@/types'
 import type { Session } from '@supabase/supabase-js'
 
+// Callbacks that stores register to be called on sign-out
+const signOutCallbacks: (() => void)[] = []
+export function onSignOut(cb: () => void) {
+  signOutCallbacks.push(cb)
+}
+
 interface AuthState {
   user: AuthUser | null
   session: Session | null
@@ -16,6 +22,8 @@ interface AuthState {
   signOut: () => Promise<void>
   setUser: (user: AuthUser | null) => void
 }
+
+let authListenerSetUp = false
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
@@ -34,17 +42,20 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ user: null, session: null, loading: false, initialized: true })
       }
 
-      // Listen for auth state changes
-      supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_OUT') {
-          set({ user: null, session: null })
-          return
-        }
-        if (session?.user) {
-          const authUser = mapSessionToUser(session)
-          set({ user: authUser, session })
-        }
-      })
+      // Only set up the auth listener once to prevent leaks
+      if (!authListenerSetUp) {
+        authListenerSetUp = true
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_OUT') {
+            set({ user: null, session: null })
+            return
+          }
+          if (session?.user) {
+            const authUser = mapSessionToUser(session)
+            set({ user: authUser, session })
+          }
+        })
+      }
     } catch {
       set({ loading: false, initialized: true })
     }
@@ -80,6 +91,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     set({ user: null, session: null })
+    signOutCallbacks.forEach((cb) => cb())
     await supabase.auth.signOut()
   },
 

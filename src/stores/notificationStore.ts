@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import { onSignOut } from '@/stores/authStore'
 import type { Notification, NotificationType } from '@/types'
 
 interface NotificationState {
@@ -93,3 +94,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
 }))
+
+onSignOut(() => {
+  useNotificationStore.setState({
+    notifications: [],
+    unreadCount: 0,
+    loading: false,
+    filter: 'all',
+    dropdownOpen: false,
+  })
+})

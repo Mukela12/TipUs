@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import { onSignOut } from '@/stores/authStore'
 import type { Employee } from '@/types'
 
 interface EmployeeState {
@@ -185,3 +186,5 @@ export const useEmployeeStore = create<EmployeeState>((set, _get) => ({
 
   reset: () => set({ employees: [], loading: false, initialized: false }),
 }))
+
+onSignOut(() => useEmployeeStore.getState().reset())

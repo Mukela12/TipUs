@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import { generateSlug, generateShortCode } from '@/lib/utils'
+import { onSignOut } from '@/stores/authStore'
 import type { Venue } from '@/types'
 
 interface VenueState {
@@ -171,3 +172,6 @@ export const useVenueStore = create<VenueState>((set, get) => ({
 
   reset: () => set({ venue: null, loading: false, initialized: false }),
 }))
+
+// Auto-reset on sign out so stale venue data doesn't persist
+onSignOut(() => useVenueStore.getState().reset())

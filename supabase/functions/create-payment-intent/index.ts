@@ -72,12 +72,9 @@ serve(async (req) => {
       },
     });
 
-    // Increment scan/tip attempt count on the QR code (non-critical)
+    // Atomically increment scan count on the QR code (non-critical)
     try {
-      await supabase
-        .from("qr_codes")
-        .update({ scan_count: (qrCode.scan_count ?? 0) + 1 })
-        .eq("id", qrCode.id);
+      await supabase.rpc("increment_scan_count", { qr_id: qrCode.id });
     } catch {
       // Skip on failure
     }

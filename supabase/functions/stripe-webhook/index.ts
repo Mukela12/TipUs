@@ -34,38 +34,33 @@ serve(async (req) => {
       if (meta.platform === "tipus") {
         console.log(`payment_intent.succeeded: ${paymentIntent.id}, amount=${paymentIntent.amount}, venue=${meta.venue_id}`);
 
-        const { error: tipError } = await supabase
+        // Idempotency check: skip if this payment intent was already recorded
+        const { data: existingTip } = await supabase
           .from("tips")
-          .insert({
-            venue_id: meta.venue_id,
-            employee_id: meta.employee_id || null,
-            amount: paymentIntent.amount,
-            currency: paymentIntent.currency,
-            tipper_name: meta.tipper_name || null,
-            tipper_message: meta.tipper_message || null,
-            stripe_payment_intent_id: paymentIntent.id,
-            status: "succeeded",
-          });
+          .select("id")
+          .eq("stripe_payment_intent_id", paymentIntent.id)
+          .maybeSingle();
 
-        if (tipError) {
-          console.error("Failed to insert tip:", tipError.message);
+        if (existingTip) {
+          console.log(`Tip already exists for payment ${paymentIntent.id}, skipping`);
         } else {
-          console.log(`Tip recorded for payment ${paymentIntent.id}`);
-        }
+          const { error: tipError } = await supabase
+            .from("tips")
+            .insert({
+              venue_id: meta.venue_id,
+              employee_id: meta.employee_id || null,
+              amount: paymentIntent.amount,
+              currency: paymentIntent.currency,
+              tipper_name: meta.tipper_name || null,
+              tipper_message: meta.tipper_message || null,
+              stripe_payment_intent_id: paymentIntent.id,
+              status: "succeeded",
+            });
 
-        // Increment scan_count on the QR code (tracks completed tips)
-        if (meta.qr_code_id) {
-          const { data: qr, error: qrFetchErr } = await supabase
-            .from("qr_codes")
-            .select("scan_count")
-            .eq("id", meta.qr_code_id)
-            .single();
-
-          if (!qrFetchErr && qr) {
-            await supabase
-              .from("qr_codes")
-              .update({ scan_count: (qr.scan_count || 0) + 1 })
-              .eq("id", meta.qr_code_id);
+          if (tipError) {
+            console.error("Failed to insert tip:", tipError.message);
+          } else {
+            console.log(`Tip recorded for payment ${paymentIntent.id}`);
           }
         }
       }

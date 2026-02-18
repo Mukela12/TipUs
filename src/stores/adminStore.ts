@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import { generateShortCode } from '@/lib/utils'
+import { onSignOut } from '@/stores/authStore'
 import type { Venue, Payout, QRCode, PayoutDistribution } from '@/types'
 
 interface VenueWithStats extends Venue {
@@ -435,3 +436,5 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     loading: false,
   }),
 }))
+
+onSignOut(() => useAdminStore.getState().reset())

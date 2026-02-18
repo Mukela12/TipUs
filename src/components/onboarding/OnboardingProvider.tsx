@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { OnboardingContext, type OnboardingContextType } from './OnboardingContext'
 import { TutorialOverlay } from './TutorialOverlay'
-import { getOnboardingKey, type TutorialStep } from './tutorialSteps'
+import type { TutorialStep } from './tutorialSteps'
 import { useAuthStore } from '@/stores/authStore'
+import { supabase } from '@/lib/supabase'
 
 interface OnboardingProviderProps {
   steps: TutorialStep[]
@@ -14,26 +15,31 @@ export function OnboardingProvider({ steps, children }: OnboardingProviderProps)
   const [isActive, setIsActive] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const user = useAuthStore((s) => s.user)
+  const session = useAuthStore((s) => s.session)
 
-  // Check if onboarding was already completed (desktop only — sidebar targets aren't visible on mobile)
+  // Show tutorial only once: check user_metadata.onboarding_completed
+  // Desktop only — sidebar spotlight targets aren't visible on mobile
   useEffect(() => {
-    if (!user?.id) return
+    if (!user?.id || !session) return
     if (window.innerWidth < 1024) return
 
-    const key = getOnboardingKey(user.id)
-    const completed = localStorage.getItem(key)
-    if (!completed) {
-      // Show tutorial after a short delay so the dashboard renders first
-      const timer = setTimeout(() => setIsActive(true), 600)
-      return () => clearTimeout(timer)
-    }
-  }, [user?.id])
+    // Check auth metadata (persisted server-side, survives device/browser changes)
+    const metadata = session.user.user_metadata
+    if (metadata?.onboarding_completed) return
+
+    // Show tutorial after a short delay so the dashboard renders first
+    const timer = setTimeout(() => setIsActive(true), 600)
+    return () => clearTimeout(timer)
+  }, [user?.id, session])
 
   const currentStepData = isActive ? steps[currentStep] ?? null : null
 
   const markComplete = useCallback(() => {
     if (!user?.id) return
-    localStorage.setItem(getOnboardingKey(user.id), 'true')
+    // Persist to auth user_metadata so it's remembered across devices/logins
+    supabase.auth.updateUser({
+      data: { onboarding_completed: true },
+    })
   }, [user?.id])
 
   const startTutorial = useCallback(() => {

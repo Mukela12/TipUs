@@ -87,6 +87,3 @@ export const employeeSteps: TutorialStep[] = [
   },
 ]
 
-export function getOnboardingKey(userId: string) {
-  return `tipus-onboarding-${userId}`
-}
