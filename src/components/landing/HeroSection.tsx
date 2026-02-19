@@ -19,8 +19,8 @@ function scrollToSection(href: string) {
 
 export default function HeroSection() {
   return (
-    <section className="mx-auto max-w-6xl px-5 pt-12 pb-20 sm:px-8 sm:pt-20 sm:pb-24" aria-label="Hero">
-      <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+    <section className="mx-auto max-w-6xl overflow-hidden px-5 pt-12 pb-20 sm:px-8 sm:pt-20 sm:pb-24" aria-label="Hero">
+      <div className="grid items-center gap-10 lg:grid-cols-[1fr,auto] lg:gap-12">
         {/* Text column */}
         <motion.div
           variants={staggerContainer}
