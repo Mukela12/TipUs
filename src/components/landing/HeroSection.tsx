@@ -19,14 +19,14 @@ function scrollToSection(href: string) {
 
 export default function HeroSection() {
   return (
-    <section className="mx-auto max-w-6xl overflow-hidden px-5 pt-12 pb-20 sm:px-8 sm:pt-20 sm:pb-24" aria-label="Hero">
-      <div className="grid items-center gap-10 lg:grid-cols-[1fr,auto] lg:gap-12">
-        {/* Text column */}
+    <section className="mx-auto max-w-6xl px-5 pt-12 pb-16 sm:px-8 sm:pt-16 sm:pb-20" aria-label="Hero">
+      <div className="flex flex-col items-center gap-10 md:flex-row md:gap-12 lg:gap-16">
+        {/* Text column — takes remaining space */}
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="text-center lg:text-left"
+          className="flex-1 text-center md:text-left"
         >
           <motion.h1
             variants={fadeInUp}
@@ -38,14 +38,14 @@ export default function HeroSection() {
 
           <motion.p
             variants={fadeInUp}
-            className="mx-auto mt-5 max-w-xl text-base text-surface-600 sm:text-lg lg:mx-0"
+            className="mx-auto mt-5 max-w-xl text-base text-surface-600 sm:text-lg md:mx-0"
           >
             Customers scan a QR code, tip by card or Apple Pay, and your team gets
             paid automatically. No hardware. No merchant account. Set up in 5
             minutes.
           </motion.p>
 
-          <motion.div variants={fadeInUp} className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start">
+          <motion.div variants={fadeInUp} className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start">
             <Link
               to="/login"
               className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-8 py-3.5 text-sm font-medium text-white shadow-medium transition-all hover:bg-primary-600 hover:shadow-elevated"
@@ -64,7 +64,7 @@ export default function HeroSection() {
           {/* Trust strip */}
           <motion.div
             variants={fadeInUp}
-            className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 lg:justify-start"
+            className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 md:justify-start"
           >
             {trustItems.map((item, i) => (
               <span key={item} className="flex items-center gap-2 text-sm text-surface-500">
@@ -77,7 +77,7 @@ export default function HeroSection() {
           {/* Feature badges */}
           <motion.div
             variants={fadeInUp}
-            className="mt-8 flex flex-wrap items-center justify-center gap-6 lg:justify-start"
+            className="mt-8 flex flex-wrap items-center justify-center gap-6 md:justify-start"
           >
             {features.map((f) => (
               <div key={f.label} className="flex items-center gap-2">
@@ -90,12 +90,12 @@ export default function HeroSection() {
           </motion.div>
         </motion.div>
 
-        {/* Illustration column */}
+        {/* Illustration — fixed width, doesn't shrink */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
-          className="flex justify-center lg:justify-end"
+          className="w-60 shrink-0 sm:w-64 md:w-56 lg:w-72"
         >
           <HeroIllustration />
         </motion.div>
