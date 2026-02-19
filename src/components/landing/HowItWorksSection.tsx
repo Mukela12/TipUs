@@ -47,7 +47,7 @@ export default function HowItWorksSection() {
       >
         <motion.h2
           variants={fadeInUp}
-          className="text-center text-2xl font-bold text-surface-900 sm:text-3xl"
+          className="font-heading text-center text-2xl font-bold text-surface-900 sm:text-3xl"
         >
           Three steps. Five minutes.{' '}
           <span className="text-primary-500">Tips flowing.</span>

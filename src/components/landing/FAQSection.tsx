@@ -52,7 +52,7 @@ export default function FAQSection() {
       >
         <motion.h2
           variants={fadeInUp}
-          className="text-center text-2xl font-bold text-surface-900 sm:text-3xl"
+          className="font-heading text-center text-2xl font-bold text-surface-900 sm:text-3xl"
         >
           Frequently asked questions
         </motion.h2>

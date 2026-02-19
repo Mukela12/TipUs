@@ -15,7 +15,7 @@ export default function FinalCTASection() {
       >
         <motion.h2
           variants={fadeInUp}
-          className="text-2xl font-bold text-surface-900 sm:text-3xl"
+          className="font-heading text-2xl font-bold text-surface-900 sm:text-3xl"
         >
           Ready to bring tipping into the{' '}
           <span className="text-primary-500">digital age?</span>

@@ -45,7 +45,7 @@ export default function BenefitsSection() {
       >
         <motion.h2
           variants={fadeInUp}
-          className="text-center text-2xl font-bold text-surface-900 sm:text-3xl"
+          className="font-heading text-center text-2xl font-bold text-surface-900 sm:text-3xl"
         >
           Built for <span className="text-primary-500">busy venue owners</span>
         </motion.h2>

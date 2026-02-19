@@ -24,7 +24,7 @@ export default function PricingSection() {
       >
         <motion.h2
           variants={fadeInUp}
-          className="text-center text-2xl font-bold text-surface-900 sm:text-3xl"
+          className="font-heading text-center text-2xl font-bold text-surface-900 sm:text-3xl"
         >
           Simple pricing. <span className="text-primary-500">No surprises.</span>
         </motion.h2>
@@ -38,7 +38,7 @@ export default function PricingSection() {
               One plan. Everything included.
             </p>
             <div className="mt-4 flex items-baseline justify-center gap-1">
-              <span className="text-4xl font-bold text-surface-900">$0</span>
+              <span className="font-heading text-4xl font-bold text-surface-900">$0</span>
               <span className="text-surface-500">/month</span>
             </div>
             <p className="mt-2 text-sm text-surface-600">

@@ -30,7 +30,7 @@ export default function HeroSection() {
         >
           <motion.h1
             variants={fadeInUp}
-            className="text-3xl font-bold tracking-tight text-surface-900 sm:text-4xl lg:text-5xl"
+            className="font-heading text-3xl font-bold tracking-tight text-surface-900 sm:text-4xl lg:text-5xl"
           >
             Your customers want to tip.{' '}
             <span className="text-primary-500">Make it effortless.</span>
