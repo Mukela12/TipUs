@@ -1,11 +1,112 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/savings.ico" />
     <link rel="icon" type="image/png" href="/savings.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TipUs Digital Tipping</title>
+
+    <title>TipUs — Digital Tipping for Australian Hospitality Venues</title>
+    <meta name="description" content="QR-code powered digital tipping for Australian hospitality venues. Customers scan, tip by card or Apple Pay, and your team gets paid automatically. No hardware. Set up in 5 minutes." />
+    <meta name="keywords" content="digital tipping, QR code tipping, hospitality tipping, Australian tipping, cashless tips, venue tipping, staff tips, tip splitting" />
+    <meta name="author" content="TipUs" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#d4856a" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TipUs — Digital Tipping for Australian Hospitality Venues" />
+    <meta property="og:description" content="QR-code powered digital tipping. Customers scan, tip by card or Apple Pay, and your team gets paid automatically. No hardware. Set up in 5 minutes." />
+    <meta property="og:url" content="https://tipus.com.au" />
+    <meta property="og:locale" content="en_AU" />
+    <meta property="og:site_name" content="TipUs" />
+    <meta property="og:image" content="https://tipus.com.au/savings.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TipUs — Digital Tipping for Australian Hospitality Venues" />
+    <meta name="twitter:description" content="QR-code powered digital tipping. Customers scan, tip by card or Apple Pay, and your team gets paid automatically." />
+    <meta name="twitter:image" content="https://tipus.com.au/savings.png" />
+
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "TipUs",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "QR-code powered digital tipping platform for Australian hospitality venues.",
+      "url": "https://tipus.com.au",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "AUD",
+        "description": "Free to set up. 5% platform fee on tips only."
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "TipUs",
+        "url": "https://tipus.com.au",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "AU"
+        }
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does TipUs work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Customers scan a QR code at your venue, choose a tip amount, and pay by card, Apple Pay, or Google Pay. Tips are automatically distributed to your team."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a Stripe account?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. TipUs handles all payment processing. You don't need to set up a Stripe account or any merchant account."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How much does TipUs cost?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "TipUs is free to set up with no monthly fees. We charge a simple 5% platform fee on tips received. That's it — no hidden costs."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do employees get paid?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tips are automatically distributed to your team members based on your chosen split method. Funds are transferred to their linked bank accounts."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is digital tipping legal in Australia?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Digital tipping is completely legal in Australia. Tips are considered a gift from the customer to the staff member."
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

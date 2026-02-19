@@ -53,3 +53,13 @@ export const overlayFade: Variants = {
   visible: { opacity: 1, transition: { duration: 0.2 } },
   exit: { opacity: 0, transition: { duration: 0.15 } },
 }
+
+/** Scale in — good for cards that pop in on scroll. */
+export const scaleIn: Variants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.4, ease: 'easeOut' },
+  },
+}
