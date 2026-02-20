@@ -69,7 +69,7 @@ const badges = [
 
 export default function TrustSection() {
   return (
-    <section className="border-y border-surface-200/60 py-12" aria-label="Trust and security">
+    <section className="py-12" aria-label="Trust and security">
       <motion.div
         variants={staggerContainer}
         initial="hidden"

@@ -13,7 +13,9 @@ const sectionLinks = [
 
 export default function LandingFooter() {
   return (
-    <footer className="border-t border-surface-200/60 bg-white py-10">
+    <footer className="py-10">
+      {/* Gradient divider */}
+      <div className="mx-auto mb-10 h-px max-w-xs bg-gradient-to-r from-transparent via-surface-200 to-transparent" />
       <div className="mx-auto max-w-5xl px-5 sm:px-8">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
           {/* Logo and tagline */}

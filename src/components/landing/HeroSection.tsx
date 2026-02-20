@@ -10,7 +10,7 @@ const features = [
   { icon: Wallet, label: 'Automatic Payouts' },
 ]
 
-const trustItems = ['Free to set up', '5% platform fee only', 'No Stripe account needed']
+const trustItems = ['Free to set up', '5% platform fee only', 'No merchant account needed']
 
 function scrollToSection(href: string) {
   const el = document.querySelector(href)
@@ -19,7 +19,11 @@ function scrollToSection(href: string) {
 
 export default function HeroSection() {
   return (
-    <section className="mx-auto max-w-6xl px-5 pt-12 pb-16 sm:px-8 sm:pt-16 sm:pb-20" aria-label="Hero">
+    <section className="relative overflow-hidden pt-12 pb-16 sm:pt-16 sm:pb-20" aria-label="Hero">
+      {/* Subtle warm gradient — only background treatment on the entire page */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary-50/60 via-primary-50/20 to-transparent" />
+
+      <div className="relative mx-auto max-w-6xl px-5 sm:px-8">
       <div className="flex flex-col items-center gap-10 md:flex-row md:gap-12 lg:gap-16">
         {/* Text column — takes remaining space */}
         <motion.div
@@ -33,22 +37,22 @@ export default function HeroSection() {
             className="font-heading text-3xl font-bold tracking-tight text-surface-900 sm:text-4xl lg:text-5xl"
           >
             Your customers want to tip.{' '}
-            <span className="text-primary-500">Make it effortless.</span>
+            <span className="italic text-primary-500">Let them.</span>
           </motion.h1>
 
           <motion.p
             variants={fadeInUp}
             className="mx-auto mt-5 max-w-xl text-base text-surface-600 sm:text-lg md:mx-0"
           >
-            Customers scan a QR code, tip by card or Apple Pay, and your team gets
-            paid automatically. No hardware. No merchant account. Set up in 5
-            minutes.
+            Customers scan a QR code, pick an amount, and pay with their
+            phone. We collect the tips and send the money to your team's
+            bank accounts on a schedule you choose.
           </motion.p>
 
           <motion.div variants={fadeInUp} className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start">
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-8 py-3.5 text-sm font-medium text-white shadow-medium transition-all hover:bg-primary-600 hover:shadow-elevated"
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary-500 px-8 py-3.5 text-sm font-medium text-white shadow-[0_4px_16px_rgba(212,133,106,0.3)] transition-all hover:bg-primary-600 hover:shadow-[0_8px_30px_rgba(212,133,106,0.4)]"
             >
               Get Started Free
               <ArrowRight className="h-4 w-4" />
@@ -81,7 +85,7 @@ export default function HeroSection() {
           >
             {features.map((f) => (
               <div key={f.label} className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 border border-primary-100/60">
                   <f.icon className="h-4 w-4 text-primary-600" />
                 </div>
                 <span className="text-sm font-medium text-surface-700">{f.label}</span>
@@ -95,10 +99,11 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
-          className="w-60 shrink-0 sm:w-64 md:w-56 lg:w-72"
+          className="w-64 shrink-0 sm:w-72 md:w-64 lg:w-80"
         >
           <HeroIllustration />
         </motion.div>
+      </div>
       </div>
     </section>
   )

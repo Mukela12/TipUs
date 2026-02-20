@@ -4,12 +4,12 @@ import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer, scaleIn } from '@/lib/animations'
 
 const features = [
-  'Unlimited QR codes',
+  'QR codes included (venue or per-employee)',
   'Unlimited employees',
-  'Real-time dashboard',
-  'Automatic tip splitting',
-  'Custom QR code branding',
-  'Email support',
+  'Real-time tip dashboard',
+  'Automatic payouts to bank accounts',
+  'Apple Pay, Google Pay, and card',
+  'No merchant account needed',
 ]
 
 export default function PricingSection() {
@@ -26,15 +26,15 @@ export default function PricingSection() {
           variants={fadeInUp}
           className="font-heading text-center text-2xl font-bold text-surface-900 sm:text-3xl"
         >
-          Simple pricing. <span className="text-primary-500">No surprises.</span>
+          Simple pricing. <span className="italic text-primary-500">No surprises.</span>
         </motion.h2>
 
         <motion.div
           variants={scaleIn}
-          className="mx-auto mt-12 max-w-md rounded-xl border border-surface-200 bg-white p-8 shadow-medium"
+          className="mx-auto mt-12 max-w-md rounded-2xl border border-white/60 bg-gradient-to-br from-primary-50/50 to-white p-8 shadow-elevated backdrop-blur-sm"
         >
           <div className="text-center">
-            <p className="text-sm font-medium uppercase tracking-wider text-primary-500">
+            <p className="text-sm font-medium uppercase tracking-widest text-primary-500">
               One plan. Everything included.
             </p>
             <div className="mt-4 flex items-baseline justify-center gap-1">
@@ -57,7 +57,7 @@ export default function PricingSection() {
 
           <Link
             to="/login"
-            className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 py-3.5 text-sm font-medium text-white shadow-medium transition-all hover:bg-primary-600 hover:shadow-elevated"
+            className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-500 px-6 py-3.5 text-sm font-medium text-white shadow-[0_4px_16px_rgba(212,133,106,0.3)] transition-all hover:bg-primary-600 hover:shadow-[0_8px_30px_rgba(212,133,106,0.4)]"
           >
             Get Started Free
             <ArrowRight className="h-4 w-4" />

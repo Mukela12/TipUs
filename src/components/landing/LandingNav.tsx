@@ -27,8 +27,8 @@ export default function LandingNav() {
     <header
       className={`sticky top-0 z-30 transition-all duration-200 ${
         scrolled
-          ? 'bg-white/80 backdrop-blur-md border-b border-surface-200/40 shadow-soft'
-          : 'bg-transparent'
+          ? 'bg-primary-50/70 backdrop-blur-xl saturate-[180%] border-b border-primary-100/30 shadow-soft'
+          : 'bg-primary-50/40'
       }`}
     >
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3 sm:px-8">
@@ -43,7 +43,7 @@ export default function LandingNav() {
             <button
               key={link.href}
               onClick={() => scrollToSection(link.href)}
-              className="text-sm font-medium text-surface-600 transition-colors hover:text-surface-900"
+              className="relative text-sm font-medium text-surface-600 transition-colors hover:text-primary-600 after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 after:bg-primary-500 after:transition-all after:duration-200 hover:after:w-full"
             >
               {link.label}
             </button>
@@ -59,7 +59,7 @@ export default function LandingNav() {
           </Link>
           <Link
             to="/login"
-            className="rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-primary-600 hover:shadow-medium"
+            className="rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white shadow-[0_2px_10px_rgba(212,133,106,0.25)] transition-all hover:bg-primary-600 hover:shadow-[0_4px_16px_rgba(212,133,106,0.35)]"
           >
             Get Started Free
           </Link>

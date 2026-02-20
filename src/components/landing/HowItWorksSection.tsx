@@ -1,28 +1,34 @@
-import { UserPlus, QrCode, BarChart3 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
+import Lottie from 'lottie-react'
+import registerAnimation from '@/assets/Register.json'
+import qrScanAnimation from '@/assets/QR Scan.json'
+import bankTransferAnimation from '@/assets/bank to bank transfer.json'
 
 const steps = [
   {
-    icon: UserPlus,
     number: '1',
-    title: 'Sign up & add your team',
+    title: 'Register & add your team',
     description:
-      'Create your venue in minutes. Invite your staff by name — they don\'t even need an account to start receiving tips.',
+      'Create your venue and add your employees. Each team member sets up their own bank details for direct payouts.',
+    animation: registerAnimation,
+    lottieSize: 'h-11 w-11',
   },
   {
-    icon: QrCode,
     number: '2',
-    title: 'Place your QR codes',
+    title: 'We send your QR codes',
     description:
-      'Generate and print QR codes for tables, counters, or anywhere customers can see them. That\'s your only hardware.',
+      'We create QR codes for your venue and send them to you. They can be for the whole team or for specific employees. Place them on tables, counters, or at the till.',
+    animation: qrScanAnimation,
+    lottieSize: 'h-14 w-14',
   },
   {
-    icon: BarChart3,
     number: '3',
-    title: 'Watch tips come in',
+    title: 'Tips flow automatically',
     description:
-      'Track tips in real time from your dashboard. Tips are automatically split and distributed to your team.',
+      'Customers scan and tip from their phone. We collect the money, split it fairly, and send it to each team member\'s bank account.',
+    animation: bankTransferAnimation,
+    lottieSize: 'h-14 w-14',
   },
 ]
 
@@ -50,44 +56,57 @@ export default function HowItWorksSection() {
           className="font-heading text-center text-2xl font-bold text-surface-900 sm:text-3xl"
         >
           Three steps. Five minutes.{' '}
-          <span className="text-primary-500">Tips flowing.</span>
+          <span className="italic text-primary-500">Tips flowing.</span>
         </motion.h2>
 
-        <div className="relative mt-14 grid gap-10 sm:grid-cols-3 sm:gap-6">
+        <motion.div
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.3 } } }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          className="relative mt-14 grid gap-10 sm:grid-cols-3 sm:gap-6"
+        >
           {/* Animated connecting line (desktop only) */}
           <motion.div
             className="absolute top-10 left-[16.7%] right-[16.7%] hidden h-px origin-left sm:block"
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.5, duration: 0.8, ease: 'easeOut' }}
+            transition={{ delay: 0.6, duration: 1, ease: 'easeOut' }}
           >
-            <div className="h-px border-t-2 border-dashed border-surface-200" />
+            <div className="h-px border-t-2 border-dashed border-surface-200/60" />
           </motion.div>
 
           {steps.map((step, i) => (
             <motion.div
               key={step.number}
-              variants={fadeInUp}
+              variants={{
+                hidden: { opacity: 0, y: 24 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+              }}
               className="relative flex flex-col items-center text-center"
             >
               {/* Pulse ring */}
               <motion.div
-                className="absolute top-0 h-16 w-16 rounded-full bg-primary-200/40"
+                className="absolute top-0 h-20 w-20 rounded-full bg-primary-200/40"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: [0.8, 1.4, 0], opacity: [0, 0.6, 0] }}
                 viewport={{ once: true }}
-                transition={{ delay: 0.8 + i * 0.3, duration: 1.2 }}
+                transition={{ delay: 1.4 + i * 0.6, duration: 1.2 }}
               />
 
               <motion.div
                 variants={iconPulse}
-                whileHover={{ scale: 1.1, rotate: -5 }}
-                className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-primary-500 text-white shadow-medium"
+                className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-white/80 shadow-medium backdrop-blur-sm border border-white/60"
               >
-                <step.icon className="h-7 w-7" />
+                <Lottie
+                  animationData={step.animation}
+                  loop
+                  className={step.lottieSize}
+                />
               </motion.div>
-              <span className="mt-1 text-xs font-semibold uppercase tracking-wider text-primary-500">
+
+              <span className="mt-2 text-xs font-semibold uppercase tracking-wider text-primary-500">
                 Step {step.number}
               </span>
               <h3 className="mt-3 text-lg font-semibold text-surface-900">
@@ -96,7 +115,7 @@ export default function HowItWorksSection() {
               <p className="mt-2 text-sm text-surface-600">{step.description}</p>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </motion.div>
     </section>
   )

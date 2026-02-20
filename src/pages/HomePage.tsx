@@ -11,7 +11,7 @@ import LandingFooter from '@/components/landing/LandingFooter'
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-50 via-white to-white">
+    <div className="min-h-screen bg-white">
       <LandingNav />
       <main>
         <HeroSection />
