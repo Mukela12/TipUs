@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ChevronRight, ChevronLeft, X, Sparkles } from 'lucide-react'
+import { ChevronRight, ChevronLeft, X } from 'lucide-react'
 import type { TutorialStep as TutorialStepType } from './tutorialSteps'
 
 interface TutorialStepProps {
@@ -37,8 +37,8 @@ function StepContent({
       {/* Content */}
       <div className="p-5 sm:p-6">
         {isFirstStep && (
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-200 text-primary-600 rounded-xl flex items-center justify-center mb-4">
-            <Sparkles className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+            <img src="/savings.png" alt="TipUs" className="w-12 h-12 rounded-xl" />
           </div>
         )}
 

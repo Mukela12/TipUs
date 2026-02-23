@@ -46,9 +46,7 @@ export default function OnboardingPage() {
         <motion.div variants={fadeInUp} className="glass-effect rounded-2xl p-6 shadow-elevated sm:p-8">
           {/* Logo */}
           <div className="mb-6 flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500 text-sm font-bold text-white">
-              T
-            </div>
+            <img src="/savings.png" alt="TipUs" className="h-9 w-9 rounded-lg" />
             <span className="text-xl font-semibold text-surface-900">TipUs</span>
           </div>
 

@@ -219,9 +219,11 @@ export default function SettingsPage() {
                 ))}
               </select>
             </div>
-            <p className="text-xs text-surface-400">
-              TipUs will automatically distribute tips to your employees on the selected schedule.
-            </p>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3.5 py-2.5">
+              <p className="text-xs font-medium text-amber-800">
+                Tips take up to 2 business days to settle before they can be distributed. TipUs will automatically pay out all settled tips to your employees on the selected schedule.
+              </p>
+            </div>
             <div className="flex justify-end">
               <button
                 type="submit"
