@@ -116,9 +116,22 @@ export function NotificationBell({ basePath }: NotificationBellProps) {
 
   const displayNotifications = filtered.slice(0, 10)
 
+  function getNotificationRoute(type: NotificationType): string {
+    switch (type) {
+      case 'tip_received':
+        return `${basePath}/tips`
+      case 'payout_completed':
+      case 'payout_failed':
+        return `${basePath}/payouts`
+      case 'qr_code_created':
+        return basePath === '/admin' ? '/admin/qr-codes' : basePath
+    }
+  }
+
   function handleNotificationClick(n: Notification) {
     if (!n.is_read) markAsRead(n.id)
     setOpen(false)
+    navigate(getNotificationRoute(n.type))
   }
 
   // Render dropdown via portal so it escapes stacking contexts (backdrop-filter, etc.)
