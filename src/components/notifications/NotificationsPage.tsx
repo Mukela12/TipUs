@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Bell,
@@ -11,7 +12,7 @@ import {
 import { cn, formatRelativeTime } from '@/lib/utils'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { useNotificationStore } from '@/stores/notificationStore'
-import type { NotificationType } from '@/types'
+import type { NotificationType, Notification } from '@/types'
 
 const filterOptions: { label: string; value: NotificationType | 'all' }[] = [
   { label: 'All', value: 'all' },
@@ -34,6 +35,9 @@ function getNotificationIcon(type: NotificationType) {
 }
 
 export default function NotificationsPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const basePath = '/' + location.pathname.split('/')[1] // '/dashboard', '/employee', or '/admin'
   const {
     notifications,
     loading,
@@ -48,6 +52,23 @@ export default function NotificationsPage() {
   useEffect(() => {
     fetchNotifications()
   }, [fetchNotifications])
+
+  function getNotificationRoute(type: NotificationType): string {
+    switch (type) {
+      case 'tip_received':
+        return `${basePath}/tips`
+      case 'payout_completed':
+      case 'payout_failed':
+        return `${basePath}/payouts`
+      case 'qr_code_created':
+        return basePath === '/admin' ? '/admin/qr-codes' : basePath
+    }
+  }
+
+  function handleNotificationClick(n: Notification) {
+    if (!n.is_read) markAsRead(n.id)
+    navigate(getNotificationRoute(n.type))
+  }
 
   const filtered =
     filter === 'all'
@@ -142,9 +163,7 @@ export default function NotificationsPage() {
                 'glass-effect rounded-xl p-4 transition-all cursor-pointer hover:shadow-medium',
                 !n.is_read && 'border-l-4 border-l-primary-500 bg-primary-50/20'
               )}
-              onClick={() => {
-                if (!n.is_read) markAsRead(n.id)
-              }}
+              onClick={() => handleNotificationClick(n)}
             >
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-100">

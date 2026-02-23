@@ -15,6 +15,40 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+// Subtract N business days (Mon-Fri) from a date
+function subtractBusinessDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  let remaining = days;
+  while (remaining > 0) {
+    result.setUTCDate(result.getUTCDate() - 1);
+    const day = result.getUTCDay();
+    if (day !== 0 && day !== 6) remaining--;
+  }
+  return result;
+}
+
+// Calculate the next payout date based on venue settings
+function getNextPayoutDate(frequency: string, payoutDay: number, fromDate: Date): Date {
+  const next = new Date(fromDate);
+  if (frequency === "monthly") {
+    next.setUTCMonth(next.getUTCMonth() + 1);
+    // Clamp to last day of month if needed (e.g. day 31 in a 30-day month)
+    const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+    next.setUTCDate(Math.min(payoutDay, lastDay));
+  } else {
+    const daysToAdd = frequency === "fortnightly" ? 14 : 7;
+    next.setUTCDate(next.getUTCDate() + daysToAdd);
+  }
+  return next;
+}
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function formatDate(d: Date): string {
+  return `${DAY_NAMES[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -39,7 +73,7 @@ serve(async (req) => {
     // 1. Query all venues with auto payouts enabled
     const { data: venues, error: venueError } = await supabase
       .from("venues")
-      .select("id, name, auto_payout_enabled, payout_frequency, payout_day, last_auto_payout_at")
+      .select("id, name, user_id, auto_payout_enabled, payout_frequency, payout_day, last_auto_payout_at")
       .eq("auto_payout_enabled", true);
 
     if (venueError) {
@@ -102,9 +136,9 @@ serve(async (req) => {
           else periodStart.setUTCDate(periodStart.getUTCDate() - 30);
         }
 
-        // Period end = yesterday
-        const periodEnd = new Date(now);
-        periodEnd.setUTCDate(periodEnd.getUTCDate() - 1);
+        // Period end = 2 business days ago (Stripe AU settlement period)
+        // Automatically accounts for weekends: Mon/Tue → 4 calendar days, Wed-Fri → 2 days
+        const periodEnd = subtractBusinessDays(now, 2);
 
         if (periodStart > periodEnd) {
           results.push({ venue_id: venue.id, venue_name: venue.name, status: "skipped", error: "Period start is after period end" });
@@ -444,6 +478,25 @@ serve(async (req) => {
           .from("venues")
           .update({ last_auto_payout_at: new Date().toISOString() })
           .eq("id", venue.id);
+
+        // Notify venue owner about next scheduled payout
+        if (venue.user_id && (newStatus === "completed" || newStatus === "partially_completed")) {
+          const nextPayoutDate = getNextPayoutDate(
+            venue.payout_frequency as string,
+            venue.payout_day as number,
+            now
+          );
+          const freq = venue.payout_frequency as string;
+          const netFormatted = `$${(net_amount / 100).toFixed(2)}`;
+
+          await supabase.from("notifications").insert({
+            user_id: venue.user_id,
+            type: "payout_completed",
+            title: `Payout of ${netFormatted} distributed to your team`,
+            body: `Your next ${freq} payout is scheduled for ${formatDate(nextPayoutDate)}.`,
+            metadata: { venue_id: venue.id, payout_id: payout.id, next_payout_date: nextPayoutDate.toISOString() },
+          });
+        }
 
         results.push({
           venue_id: venue.id,
