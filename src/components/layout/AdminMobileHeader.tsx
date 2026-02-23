@@ -37,7 +37,7 @@ export function AdminMobileHeader() {
   }, [menuOpen])
 
   return (
-    <header className="lg:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-surface-200/60">
+    <header className="lg:hidden shrink-0 sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-surface-200/60">
       <div className="flex items-center justify-between px-4 py-3">
         <button
           onClick={() => setMenuOpen(!menuOpen)}
